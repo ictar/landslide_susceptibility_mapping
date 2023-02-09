@@ -1,4 +1,4 @@
-from processing import LSM
+from processing import LSM, get_factors_meta
 from config import base_dir
 
 def Valchiavenna_v1_without():
@@ -19,7 +19,13 @@ def Valchiavenna_v2_with():
         
     clfs = LSM('Valchiavenna', factor_dir, trainset_path, testset_path, result_path, preprocess=None)
 
+def check_factors():
+    vc_dir = base_dir + r"ValChiavenna/"
+    factor_dir = vc_dir+"1.factors"
+    #load_rasters(factor_dir)
+    get_factors_meta(factor_dir)
 
 if __name__ == '__main__':
-    Valchiavenna_v1_without()
+    #Valchiavenna_v1_without()
     #Valchiavenna_v2_with()
+    check_factors()

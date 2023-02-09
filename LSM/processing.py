@@ -18,22 +18,32 @@ def _modelname2filename(mn):
     mn = mn.replace(":", " ").replace("/", " ")
     return "_".join([s for s in mn.split() if s])
     
+# explore
+def get_factors_meta(layer_dir):
+    for rLayer in rFactors:
+        with rasterio.open(f'{layer_dir}/{rLayer}.tif') as ds:
+            print(f"""[{rLayer}]
+            dtype: {ds.meta['dtype']}
+            nodata: {ds.meta['nodata']}
+            width: {ds.meta['width']}
+            height: {ds.meta['height']}
+            crs: {ds.meta['crs']}
+            transform: {ds.meta['transform']}
+            """)
 
 # load 
 def load_rasters(layer_dir):
-    factors = {}
+    factors, meta = {}, None
     for rLayer in rFactors:
         with rasterio.open(f'{layer_dir}/{rLayer}.tif') as ds:
             factors[rLayer] = ds.read(1)
-            # after the operation below, the dtype will become 'float64'
+            # after the operation below, the dtype will become 'float64', because np.nan is introduced
             # ref: https://appdividend.com/2022/01/28/np-nan/
             factors[rLayer] = np.where(factors[rLayer]==ds.nodatavals,np.nan,factors[rLayer])
             
             # TOFIX: no space. handling some special type to reduce space
-            if rLayer == 'plan': # To avoid overflow
-                factors[rLayer] = factors[rLayer].astype(np.float32)
-            elif ds.dtypes[0] in DTYPE_MAPPING:
-                factors[rLayer] = factors[rLayer].astype(DTYPE_MAPPING[ds.dtypes[0]])
+            if factors[rLayer].dtype.name in DTYPE_MAPPING:
+               factors[rLayer] = factors[rLayer].astype(DTYPE_MAPPING[factors[rLayer].dtype.name])
 
             print(f"""[INFO of {rLayer}]
             {list(zip(ds.indexes, ds.dtypes, ds.nodatavals))}
@@ -45,9 +55,10 @@ def load_rasters(layer_dir):
             Max: {np.max(factors[rLayer])}
             """)
 
-            meta = ds.meta 
-            
-    mask = np.where(np.isnan(factors['dtm']),np.nan,1)
+            if meta is None: meta = ds.meta 
+
+    # TOFIX: no space.    
+    mask = np.where(np.isnan(factors['dtm']),np.nan,1).astype(np.float16)
     
     return factors, meta, mask
 
@@ -76,6 +87,7 @@ def categorical_factors_preprocessing(df):
     return df
 
 # 增加定性数据
+# ref: https://www.datalearner.com/blog/1051637141445141
 def add_categorical(df):
     for cat in categorical_factors:
         df[cat] = df[cat].astype('object')
@@ -99,35 +111,36 @@ def get_X_Y(df):
     # drop fields which are not needed for the classification
     dropped_columns = list(set(df.columns)-set(rFactors))
     # TOFIX: dusaf = -99999
-    df = df[df.dusaf != -99999]
+    # 当前处理的数据，dusaf 取值范围为 [11,51]，直接删掉训练集中对应项
+    #df = df[df.dusaf != -99999]
     X, Y = df.drop(columns=dropped_columns), None
     if "hazard" in df.columns: Y = df.hazard  
     # handle categorical field
     X = add_categorical(X)
     # TOFIX: input X cannot contain NaN
     X=X.fillna(NaN)
+    # TOFIX: save space
+    X = X.astype(MODEL_DATA_COLUMN_TYPES)   
     return X, Y
 
 # return pd.dataframes
 def get_targets(layer_dir):
     factors, meta, mask = load_rasters(layer_dir)
-    target={}
+    target, raster_info ={}, None
 
     for layer in continuous_factors:
         target[layer] = factors[layer].flatten()
-        raster_info = {
-            "transform": meta['transform'],
-            "shape": factors[layer].shape,
-            "crs": meta['crs'],
+        if raster_info is None:
+            raster_info = {
+                "transform": meta['transform'],
+                "shape": factors[layer].shape,
+                "crs": meta['crs'],
             }
 
     for cat in categorical_factors:    
         target[cat] = factors[cat].flatten()
 
     target_xs, _ = get_X_Y(pd.DataFrame(target))
-    #target_xs=target_xs.fillna(NaN)
-    
-    #print(f"[Target] X = {target_xs.shape}, Columns = {target_xs.columns}")
     
     return target_xs, raster_info, mask
 
@@ -170,7 +183,7 @@ def ensemble_bagging(X, Y, Xtest, Ytest, model_paras=DEFAULT_RANDOMFOREST_MODEL_
     return clf
 
 from sklearn.ensemble import RandomForestClassifier
-RANDOMFOREST_MODEL_LABLE = "Fortests of randomized trees"
+RANDOMFOREST_MODEL_LABLE = "Forests of randomized trees"
 '''
 n_estimators: The number of trees in the forest. (指定森林中树的颗数，越多越好，只是不要超过内存)
                 default: 100
@@ -356,7 +369,6 @@ def optimalPRCthreshold(y_true, y_pred, model_label, save_to=None):
     '''
     print('\n ###  CLASSIFICATION BASED ON OPTIMAL THRESHOLD FROM PRC ### \n')
 
-    # y_predR = rclf.predict_proba(test_xs)
     precision, recall, thresholds = metrics.precision_recall_curve(y_true, y_pred[:,1])
     # convert to f score
     fscore = (2 * precision * recall) / (precision + recall)
@@ -513,17 +525,23 @@ def LSM(ROI_label, factor_dir, trainset_path, testset_path, result_path, preproc
         Y = {train_y.shape},
         Columns = {train_xs.columns}
         Column Types = {train_xs.dtypes}
+        Non Check = {np.count_nonzero(np.isnan(train_xs))}
+        Infinity Check = { np.count_nonzero(np.isinf(train_xs))}
     
     Testing points shape:
         X = {test_xs.shape},
         Y = {test_y.shape},
         Columns = {test_xs.columns}
         Column Types = {test_xs.dtypes}
+        Non Check = {np.count_nonzero(np.isnan(test_xs))}
+        Infinity Check = { np.count_nonzero(np.isinf(test_xs))}
 
     Target:
         X = {target_xs.shape},
         Columns = {target_xs.columns}
         Column Types = {target_xs.dtypes}
+        Non Check = {np.count_nonzero(np.isnan(target_xs))}
+        Infinity Check = { np.count_nonzero(np.isinf(target_xs))}
     """)
     print("\n\nTime Cost:  %.3f seconds" % (end-start))
 

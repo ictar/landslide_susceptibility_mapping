@@ -1,4 +1,4 @@
-from processing import LSM, load_rasters
+from processing import LSM, load_rasters, get_factors_meta
 from config import base_dir
 
 def ValTartano():
@@ -13,12 +13,13 @@ def ValTartano():
         target_xs = target_xs.drop(labels="dusaf_13", axis=1)
         return train_xs, train_y, test_xs, test_y, target_xs
         
-    LSM('Val Tartano', factor_dir, trainset_path, testset_path, result_path, preprocess)
+    LSM('Val Tartano', factor_dir, trainset_path, testset_path, result_path, None)
 
 def check_factors():
     vt_dir = base_dir + r"Val Tartano/"
     factor_dir = vt_dir+"1.factors"
-    load_rasters(factor_dir)
+    #load_rasters(factor_dir)
+    get_factors_meta(factor_dir)
 
 if __name__ == '__main__':
     #ValTartano()

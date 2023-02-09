@@ -1,4 +1,4 @@
-from processing import LSM, load_rasters
+from processing import LSM, load_rasters, get_factors_meta
 from config import base_dir
 
 def UpperValtellina():
@@ -14,7 +14,8 @@ def UpperValtellina():
 def check_factors():
     uv_dir = base_dir + r"Upper Valtellina/"
     factor_dir = uv_dir+"1.factors"
-    load_rasters(factor_dir)
+    #load_rasters(factor_dir)
+    get_factors_meta(factor_dir)
 
 
 if __name__ == '__main__':

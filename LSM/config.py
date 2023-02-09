@@ -16,9 +16,10 @@ NaN = -9999
 #JOBLIB_TEMP_FOLDER = r'/Users/elexu/tmp'
 JOBLIB_TEMP_FOLDER = r'/Volumes/Another/tmp'
 # TOAVOID: save memory
-DATA_COLUMN_TYPES = {}
+# float16: -65536 - 65536
+MODEL_DATA_COLUMN_TYPES = {}
 for f in continuous_factors:
-       DATA_COLUMN_TYPES[f] =  np.float16
+       MODEL_DATA_COLUMN_TYPES[f] =  np.float32
 
 # when deal with float->int, 'RuntimeWarning: invalid value encountered in cast'
 '''
@@ -33,8 +34,9 @@ array([0, 1, 2], dtype=uint8)
 >>> arr2
 array([nan,  1.,  2.], dtype=float16)
 '''
-DTYPE_MAPPING = {'float32': np.float16, 'float64': np.float16, 'uint16': np.uint16}
+DTYPE_MAPPING = {'float64': np.float32}
 
 
 ##### for processing
-PROCESS_BATCH_SIZE = 5*(10**6)
+# PROCESS_BATCH_SIZE = 67127581 # first try
+PROCESS_BATCH_SIZE = 67127581 // 2
