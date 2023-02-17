@@ -27,5 +27,5 @@ def check_factors():
 
 if __name__ == '__main__':
     #Valchiavenna_v1_without()
-    #Valchiavenna_v2_with()
-    check_factors()
+    Valchiavenna_v2_with()
+    #check_factors()

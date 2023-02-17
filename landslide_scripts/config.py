@@ -1,9 +1,9 @@
 # INPUT
 #base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/"
-base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Lombardy/"
-#base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/1.factors/"
-data_dir = base_dir + r"data/"
-#data_dir = base_dir
+#base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Lombardy/"
+base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/"
+#data_dir = base_dir + r"data/"
+data_dir = base_dir + r"1.factors/"
 processing_dir = base_dir + r"processing/"
 dtm = data_dir + "dtm.tif"
 

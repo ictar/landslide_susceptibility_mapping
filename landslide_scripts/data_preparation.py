@@ -1,7 +1,7 @@
 import processing
 from qgis.core import QgsRasterLayer
 
-config_path = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/Materials/landslide_scripts"
+config_path = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/Materials/master_thesis/landslide_scripts"
 import subprocess, sys, os
 if config_path not in sys.path: sys.path.append(config_path)
 from config import *
@@ -87,20 +87,21 @@ def slope_aspect_curvature():
         'OUTPUT': aspect,
     }, feedback=MyFeedback())
 
+# TOFIX: generate by aspect (in radian, not degree), not dtm. Notice that by now, the aspect generated is in radian
 def east_north():      
     ## eastness and northness
     east_paras = {
-        'INPUT_A': dtm,
+        'INPUT_A': aspect,
         'BAND_A': 1,
-        'FORMULA': 'sin(A)',
+        'FORMULA': 'sin(A*0.01745)',
         'OUTPUT': eastness,
     }
     processing.runAndLoadResults('gdal:rastercalculator', east_paras, feedback=MyFeedback())
 
     north_paras = {
-        'INPUT_A': dtm,
+        'INPUT_A': aspect,
         'BAND_A': 1,
-        'FORMULA': 'cos(A)',
+        'FORMULA': 'cos(A*0.01745)',
         'OUTPUT': northness,
     }
     processing.runAndLoadResults('gdal:rastercalculator', north_paras, feedback=MyFeedback())
@@ -200,4 +201,4 @@ def prepare_data():
 
 #prepare_data()
 
-vec2raster(landuse, landuse_r, '2-CODICE', dtype=2)
+east_north()
