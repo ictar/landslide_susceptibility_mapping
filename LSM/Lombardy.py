@@ -153,5 +153,5 @@ if __name__ == '__main__':
     testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points.csv"
     #preparation(ld_dir+"1.factors", M=1, N=5)
     #Lombardy(clfs, ld_dir, factor_dirs, testset_path)
-    Lombardy_WithChunk()
-    #check_factors()
+    #Lombardy_WithChunk()
+    check_factors()

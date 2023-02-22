@@ -221,6 +221,33 @@ def get_factors_meta(layer_dir):
             crs: {ds.meta['crs']}
             transform: {ds.meta['transform']}
             """)
+            # save image
+            img_name = os.path.join(layer_dir, f"{rLayer}.png")
+
+            outmap = ds.read(1)
+            if rLayer in categorical_factors:
+                print(f"unique value: {np.unique(outmap)}")
+            outmap = np.where(outmap==ds.nodatavals,np.nan,outmap)
+            min_val = np.nanmin(outmap)
+            max_val = np.nanmax(outmap)
+            print(f"""
+            min value: {min_val}
+            max value: {max_val}
+            """)
+            continue
+
+            plt.figure(figsize=(10,10))
+            plt.imshow(outmap,cmap='RdYlGn_r',vmin=min_val,vmax=max_val)
+            plt.title(f'Factor - {rLayer}')
+            plt.colorbar()
+            plt.savefig(img_name)
+
+            del outmap
+        
+        del ds
+        gc.collect()
+
+
 
 def get_raster_meta(layer_path):
     column_types, raster_info, mask = None, None, None
@@ -473,8 +500,7 @@ def optimalROCthreshold(y_true, y_pred, model_label, save_to=None):
     best_thresh = thresholds[ix]
 
     print(f"""True Positive Rate = {tpr[ix]}
-False Positive Rate = {fpr[ix]}
-Best Threshold = {best_thresh}""")
+False Positive Rate = {fpr[ix]}""")
 
     # plot the roc curve for the model with the best threshold
     plt.figure()
@@ -488,7 +514,9 @@ Best Threshold = {best_thresh}""")
     plt.legend()
     # show the plot
     if save_to:
-        plt.savefig(os.path.join(save_to, f"optimalROCthreshold_{_modelname2filename(model_label)}"))
+        tmp_save_path = os.path.join(save_to, f"optimalROCthreshold_{_modelname2filename(model_label)}")
+        plt.savefig(tmp_save_path)
+        print(f"![optimalROCthreshold]({tmp_save_path}.png)")
     else:
         plt.show()
 
@@ -507,22 +535,24 @@ Best Threshold = {best_thresh}""")
     FPR = 1- metrics.recall_score(y_true,  y_predRnewT, pos_label = 0)
 
     print(f"""
- Testing Accuracy 
-Accuracy Score: {metrics.accuracy_score(y_true, y_predRnewT)}
-
 Classification report
 {metrics.classification_report(y_true, y_predRnewT)}
 
 Confussion matrix
 {metrics.confusion_matrix(y_true,  y_predRnewT)}
 
-AUCROC
-{metrics.roc_auc_score(y_true, y_predRnewT)}
+Testing Accuracy 
+Accuracy Score: {metrics.accuracy_score(y_true, y_predRnewT)}
 
 Precision: {precision}
 Recall: {recall}
-False Positive Rate: {FPR}
 F1 score: {fscore}
+False Positive Rate: {FPR}
+
+Best Threshold = {best_thresh}
+
+AUCROC
+{metrics.roc_auc_score(y_true, y_predRnewT)}
 """)
 
 def optimalPRCthreshold(y_true, y_pred, model_label, save_to=None):
@@ -557,7 +587,9 @@ def optimalPRCthreshold(y_true, y_pred, model_label, save_to=None):
     plt.legend()
     # show the plot
     if save_to:
-        plt.savefig(os.path.join(save_to, f"optimalPRCthreshold{_modelname2filename(model_label)}"))
+        tmp_save_path = os.path.join(save_to, f"optimalPRCthreshold{_modelname2filename(model_label)}")
+        plt.savefig(tmp_save_path)
+        print(f"![optimalPRCthreshold]({tmp_save_path}.png)")
     else:
         plt.show()
 
@@ -575,19 +607,23 @@ def optimalPRCthreshold(y_true, y_pred, model_label, save_to=None):
     precision, recall, fscore,_ = metrics.precision_recall_fscore_support(y_true,  y_predRnewT)
     FPR = 1- metrics.recall_score(y_true,  y_predRnewT, pos_label = 0)
 
-    print(f""" Testing Accuracy 
-Accuracy Score: {metrics.accuracy_score(y_true, y_predRnewT)}
-
+    print(f"""
 Classification report: {metrics.classification_report(y_true, y_predRnewT)}
 
-Confussion matrix: {metrics.confusion_matrix(y_true,  y_predRnewT)}
+Confussion matrix:
+{metrics.confusion_matrix(y_true,  y_predRnewT)}
 
-AUCROC: {metrics.roc_auc_score(y_true, y_predRnewT)}
+Testing Accuracy 
+Accuracy Score: {metrics.accuracy_score(y_true, y_predRnewT)}
 
 Precision: {precision}
 Recall: {recall}
+F1 score: {fscore}
 False Positive Rate: {FPR}
-F1 score: {fscore}""")
+
+Best Threshold={best_thresh}
+
+AUCROC: {metrics.roc_auc_score(y_true, y_predRnewT)}""")
 
 def evaluation_report(y_true, y_pred, model_label, save_to):
     precision, recall, fscore,_ = metrics.precision_recall_fscore_support(
@@ -615,12 +651,57 @@ def evaluation_report(y_true, y_pred, model_label, save_to):
     [AUCROC]
     {metrics.roc_auc_score(y_true,  [round(num) for num in y_pred[:,1]])}
     """)
+    # plot ROC and PRC
+    fpr, tpr, thresholds = metrics.roc_curve(y_true, y_pred[:,1])
+
+    # plot the roc curve for the model with the best threshold
+    plt.figure()
+    plt.plot([0,1], [0,1], linestyle='--', label='No Skill')
+    plt.plot(fpr, tpr, color='black',label=model_label)
+    # axis labels
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.grid(True,'major',linewidth=0.3)
+    plt.legend()
+    tmp_save_path = os.path.join(save_to, f"ROC_{_modelname2filename(model_label)}")
+    plt.savefig(tmp_save_path)
+    print(f"![ROC]({tmp_save_path}.png)")
+
+    precision, recall, thresholds = metrics.precision_recall_curve(y_true, y_pred[:,1])
+    # plot the roc curve for the model
+    plt.figure()
+    plt.plot([0,1], [1,0], linestyle='--', label='No Skill')
+    plt.plot(recall, precision, color='black', label=model_label)
+    plt.grid(True,'major',linewidth=0.3)
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.legend()
+    tmp_save_path = os.path.join(save_to, f"PRC{_modelname2filename(model_label)}")
+    plt.savefig(tmp_save_path)
+    print(f"![PRC]({tmp_save_path}.png)")
+
     print("\t[Optimal ROC Threshold]")
     optimalROCthreshold(y_true, y_pred, model_label, save_to)
     
     print("\t[Optimal AUC Threshold]")
     optimalPRCthreshold(y_true, y_pred, model_label, save_to)
     
+def result_evaluation(testing_data_path, save_to, model_label):
+    testing_data = np.genfromtxt(testing_data_path, delimiter=",", skip_header=1, filling_values=NaN)
+    print(testing_data[0:10, :])
+
+    # ADD: remove NODATA
+    print(f"Before remove NODATA, testing data shape is {testing_data.shape}, NODATA count is {np.count_nonzero(testing_data[:,2]==NaN)}")
+    testing_data = testing_data[testing_data[:,2]!=NaN]
+    print(f"After remove NODATA, testing data shape is {testing_data.shape}")
+    # ADD END
+
+    y_true, y_pred = testing_data[:,1], testing_data[:,2]
+    print(y_true[:10], y_pred[:10])
+    y_pred = y_pred.reshape((y_pred.shape[0],1))
+    y_pred = np.concatenate([y_pred, y_pred], axis=1)
+    evaluation_report(y_true, y_pred, model_label, save_to)
+
 
 ############################ PUT THEM TOGETHER ############################ 
 
