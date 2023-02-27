@@ -71,6 +71,13 @@ def categorical_factors_preprocessing(df):
         for column in ['rivers', 'roads', 'faults']:
             df.loc[df[column]==k, column] = v
     #print(f"[AFTER ({timeit.default_timer()-start_time})] river: {df.rivers.unique()}, roads: {df.roads.unique()}, faults: {df.faults.unique()}, dusaf: {df.dusaf.unique()}")
+
+    # TOCHECK: change profile and plan to categorical factor to see what happen => No performance increase, abandom!
+    #df.loc[df["plan"]<0, 'plan'] = -1
+    #df.loc[df["plan"]>0, 'plan'] = 1
+    #df.loc[df["profile"]<0, 'profile'] = -1
+    #df.loc[df["profile"]>0, 'profile'] = 1
+    #print(f"After change profile and plan, now the unique value of plan is {np.unique(df['plan'])}, the unique value of profile is {np.unique(df['profile'])}")
     
     return df
 
@@ -89,7 +96,7 @@ def add_categorical(df):
                      for cn in list(df.columns) if cn.startswith(prefix_)},
             inplace=True
         )
-             
+          
     return df.drop(columns=categorical_factors)
 
 # 获取 features 和 label
@@ -123,7 +130,7 @@ def get_targets(layer_dir):
                 "transform": meta['transform'],
                 "shape": factors[layer].shape,
                 "crs": meta['crs'],
-            }
+            }      
 
     for cat in categorical_factors:    
         target[cat] = factors[cat].flatten()
@@ -226,7 +233,13 @@ def get_factors_meta(layer_dir):
 
             outmap = ds.read(1)
             if rLayer in categorical_factors:
-                print(f"unique value: {np.unique(outmap)}")
+                count = outmap.shape[0]*outmap.shape[1]
+                uniq_val = np.unique(outmap, return_counts=True)
+                print(f"unique value: {uniq_val}\n")
+                for i in range(len(uniq_val[0])):
+                    print(f"\tFor value {uniq_val[0][i]}: {uniq_val[1][i]} / {count} = {uniq_val[1][i]*100/count :.4f} %")
+
+
             outmap = np.where(outmap==ds.nodatavals,np.nan,outmap)
             min_val = np.nanmin(outmap)
             max_val = np.nanmax(outmap)
@@ -234,7 +247,6 @@ def get_factors_meta(layer_dir):
             min value: {min_val}
             max value: {max_val}
             """)
-            continue
 
             plt.figure(figsize=(10,10))
             plt.imshow(outmap,cmap='RdYlGn_r',vmin=min_val,vmax=max_val)
@@ -340,6 +352,19 @@ def ensemble_adaboost(X, Y, Xtest, Ytest,
     
     return clf
 
+from sklearn.calibration import CalibratedClassifierCV
+CALIBRATED_ADABOOST_MODEL_LABLE = "AdaBoost Calibrated"
+DEFAULT_CALIBRATED_ADABOOST_MODEL_PARAS = {'n_estimators': 300, 'learning_rate': 0.8}
+def ensemble_calibrated_adaboost(X, Y, Xtest, Ytest,
+                      model_paras=DEFAULT_CALIBRATED_ADABOOST_MODEL_PARAS, save_to=None):
+    # train
+    clf = CalibratedClassifierCV(AdaBoostClassifier(**model_paras)).fit(X, Y)
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+    ## test result evaluation
+    evaluation_report(Ytest, Ytest_pred, "Model Ensemble / Adaboost Calibrated", save_to)
+    
+    return clf
 
 from sklearn.ensemble import GradientBoostingClassifier
 GRADIENT_TREE_BOOSTING_MODEL_LABLE = "Gradient Tree Boosting"
@@ -354,24 +379,83 @@ def ensemble_gradienttreeboosting(X, Y, Xtest, Ytest,
     evaluation_report(Ytest, Ytest_pred, "Model Ensemble / Gradient Tree Boosting", save_to)
     return clf
 
+from sklearn.linear_model import SGDClassifier
+SVM_MODEL_LABLE = "Support Vector Machine"
+# note that here modify the default loss to "modified_huber" because "probability estimates are not available for loss='hinge'" 
+# and ‘modified_huber’ is another smooth loss that brings tolerance to outliers as well as probability estimates.
+DEFAULT_SVM_MODEL_PARAS = {"max_iter": 1000, "n_jobs": -1, "loss": "modified_huber"}
+def svm_svc(X, Y, Xtest, Ytest,
+            model_paras=DEFAULT_SVM_MODEL_PARAS, save_to=None):
+    # train
+    clf = SGDClassifier(**model_paras).fit(X, Y)
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+    ## test result evaluation
+    evaluation_report(Ytest, Ytest_pred, "Model Support Vector Machine", save_to)
+    return clf
+
+from sklearn.gaussian_process import GaussianProcessClassifier
+GAUSSIAN_PROCESS_MODEL_LABEL = "Gaussian Process"
+DEFAULT_GAUSSIAN_PROCESS_MODEL_PARAS = {"max_iter_predict": 100}
+def gaussian_process(X, Y, Xtest, Ytest,
+            model_paras=DEFAULT_GAUSSIAN_PROCESS_MODEL_PARAS, save_to=None):
+    # train
+    clf = GaussianProcessClassifier(**model_paras).fit(X, Y)
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+    ## test result evaluation
+    evaluation_report(Ytest, Ytest_pred, "Model Gaussian Process", save_to)
+    return clf
+
+from sklearn.neural_network import MLPClassifier
+NEURAL_NETWORK_MODEL_LABEL = "Neural Network"
+DEFAULT_NEURAL_NETWORK_MODEL_PARAS = {}
+def neural_network(X, Y, Xtest, Ytest,
+            model_paras=DEFAULT_NEURAL_NETWORK_MODEL_PARAS, save_to=None):
+    # train
+    clf = MLPClassifier(**model_paras).fit(X, Y)
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+    ## test result evaluation
+    evaluation_report(Ytest, Ytest_pred, "Model Neural Network", save_to)
+    return clf
+
+
 def load_model(model_path):
     return joblib.load(model_path)
 
 ############################ MAPPING ############################ 
-def plot_LSM_prediction(target_pred, raster_info, mask, model_label, save_to=None):
-    responsesG = target_pred[:,1].reshape(raster_info['shape'])
+def plot_prediction(target_pred, raster_info, mask, title, save_to=None):
+    responsesG = target_pred.reshape(raster_info['shape'])
     outmapG = np.where(mask==1,responsesG, np.nan)
 
     plt.figure(figsize=(10,10))
     plt.imshow(outmapG,cmap='RdYlGn_r',vmin=0,vmax= 1)
-    plt.title(f'Probability of Landslide class - {model_label}')
+    plt.title(title)
     plt.colorbar()
     if save_to:
-        plt.savefig(os.path.join(save_to, f"LSM_{_modelname2filename(model_label)}"))
+        plt.savefig(save_to)
     else:
         plt.show()
     
     return outmapG
+
+def plot_LSM_prediction(target_pred, raster_info, mask, model_label, save_to=None):
+    outmap = {}
+    # LSM
+    title = f'Probability of Landslide - {model_label}'
+    save_lsm_to = os.path.join(save_to, f"LSM_{_modelname2filename(model_label)}")
+    outmap['LSM'] = plot_prediction(target_pred[:,1], raster_info, mask, title, save_lsm_to)
+
+    # NLZ
+    title = f'Probability of No Landslide - {model_label}'
+    save_nlz_to = os.path.join(save_to, f"NLZ_{_modelname2filename(model_label)}")
+    outmap['NLZ'] = plot_prediction(target_pred[:,0], raster_info, mask, title, save_nlz_to)
+
+    # TOCHECK
+    print(f"LSM+NLZ == {np.unique(outmap['LSM']+outmap['NLZ'])}")
+
+    return outmap
 
 def mapping(target_xs, clf, model_label,raster_info, mask, save_to):
     #print(f"[Mapping] Model: {model_label}")
@@ -382,14 +466,15 @@ def mapping(target_xs, clf, model_label,raster_info, mask, save_to):
         os.path.join(save_to, f'LSM_{model_label}.tif'),
         'w',
         driver='GTiff',
-        height=outmap.shape[0],
-        width=outmap.shape[1],
-        count=1,
-        dtype=outmap.dtype,
+        height=outmap['LSM'].shape[0],
+        width=outmap['LSM'].shape[1],
+        count=2,
+        dtype=outmap['LSM'].dtype,
         crs=raster_info['crs'],
         transform=raster_info['transform'],
     ) as dst:
-        dst.write(outmap, 1)
+        dst.write(outmap['LSM'], 1)
+        dst.write(outmap['NLZ'], 2)
 
 def bigdata_mapping(model_label, clf_pred_dir, save_to, raster_info, mask, chunk_idxs):
     print(f"""[DIR]
@@ -490,7 +575,7 @@ def optimalROCthreshold(y_true, y_pred, model_label, save_to=None):
     model_label: (str) the name of the model needed for the plot
 
     '''
-    print('\n ###  CLASSIFICATION BASED ON OPTIMAL THRESHOLD FROM ROC ### \n')
+    print('\n###  CLASSIFICATION BASED ON OPTIMAL THRESHOLD FROM ROC\n')
 
     fpr, tpr, thresholds = metrics.roc_curve(y_true, y_pred[:,1])
 
@@ -565,7 +650,7 @@ def optimalPRCthreshold(y_true, y_pred, model_label, save_to=None):
     model_label: (str) the name of the model needed for the plot
 
     '''
-    print('\n ###  CLASSIFICATION BASED ON OPTIMAL THRESHOLD FROM PRC ### \n')
+    print('\n###  CLASSIFICATION BASED ON OPTIMAL THRESHOLD FROM PRC\n')
 
     precision, recall, thresholds = metrics.precision_recall_curve(y_true, y_pred[:,1])
     # convert to f score
@@ -680,10 +765,8 @@ def evaluation_report(y_true, y_pred, model_label, save_to):
     plt.savefig(tmp_save_path)
     print(f"![PRC]({tmp_save_path}.png)")
 
-    print("\t[Optimal ROC Threshold]")
     optimalROCthreshold(y_true, y_pred, model_label, save_to)
-    
-    print("\t[Optimal AUC Threshold]")
+
     optimalPRCthreshold(y_true, y_pred, model_label, save_to)
     
 def result_evaluation(testing_data_path, save_to, model_label):
@@ -792,7 +875,7 @@ def LSM(ROI_label, factor_dir, trainset_path, testset_path, result_path, preproc
         Non Check = {np.count_nonzero(np.isnan(target_xs))}
         Infinity Check = { np.count_nonzero(np.isinf(target_xs))}
     """)
-    print("\n\nTime Cost:  %.3f seconds" % (end-start))
+    print("\n\nPreprocessing Time Cost:  %.3f seconds" % (end-start))
 
     # 3. Processing
     print("## Processing and Evaluation")
@@ -802,6 +885,7 @@ def LSM(ROI_label, factor_dir, trainset_path, testset_path, result_path, preproc
         ## train
         clf = alg(train_xs, train_y, test_xs, test_y, save_to=result_path)
         clfs[alg_label] = clf
+        print("Training and Evaluation Time cost: %.3f seconds" % (time()-start))
         ## save model
         joblib.dump(clf, os.path.join(result_path, f'{ROI_label}_{alg_label}.pkl'))
         ## mapping
@@ -810,7 +894,7 @@ def LSM(ROI_label, factor_dir, trainset_path, testset_path, result_path, preproc
         endM = time()
         print("Mapping Time cost: %.3f seconds" % (endM-startM))
         end = time()
-        print("\n\nTime Cost:  %.3f seconds" % (end-start))
+        print("\n\n Total Time Cost:  %.3f seconds\n\n" % (end-start))
         
         
     return clfs

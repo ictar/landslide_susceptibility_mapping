@@ -33,7 +33,8 @@ def preparation(factor_path, M=6, N=5):
 ## TOFIX: Manage big rasters (https://www.giscourse.com/easy-way-to-manage-big-raster-layers-in-qgis-raster-divider-and-easy-raster-splitter/)
 ## TOFIX: 使用 'saga:addrastervaluestopoints' 对 category factor 进行采样的时候出现浮点值 --> 使用 gdal.translate 将这些 factor 转换成 uint16。特别的，对于 dusaf，设置 0 为 NODATA --> 不行，会出现值偏差。重新rasterize，这次直接选择output data type。但是在采样过程中，tif转grid的resampling方式是“B-Spline Interpolation”，这样会不会导致采样的值发生改变呢？不清楚，试试直接调用 saga_cmd （e.g. saga_cmd io_gdal 0 -TRANSFORM 1 -RESAMPLING 0 -GRIDS "./dusaf.sgrd" -FILES "./dusaf.tif"），分别选择“Resampling: Nearest Neighbour” 和 “Resampling: B-Spline Interpolation” 对比下结果 --> 确实不行，修改为先“Resampling: Nearest Neighbour”，再采样
 def Lombardy(clfs, ld_dir, factor_dirs, testset_path):
-    result_path = ld_dir+"3.results/"
+    result_path = ld_dir+"3.results/testingpoints_without_3regions"
+    #result_path = ld_dir+"3.results/testingpoints_in_whole_region"
 
     print(f"""# Lombardy
     [DIR]
@@ -145,13 +146,17 @@ if __name__ == '__main__':
     
     clfs_dir = base_dir + r"ValChiavenna/3.results/2nd_with/"
     clfs = {
-        BAGGING_MODEL_LABLE: clfs_dir+"Valchiavenna_Bagging.pkl",
-        RANDOMFOREST_MODEL_LABLE: clfs_dir+"Valchiavenna_Forests of randomized trees.pkl",
-        GRADIENT_TREE_BOOSTING_MODEL_LABLE: clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl",
-        ADABOOST_MODEL_LABLE: clfs_dir+"Valchiavenna_AdaBoost.pkl",
+        #BAGGING_MODEL_LABLE: clfs_dir+"Valchiavenna_Bagging.pkl",
+        #RANDOMFOREST_MODEL_LABLE: clfs_dir+"Valchiavenna_Forests of randomized trees.pkl",
+        #GRADIENT_TREE_BOOSTING_MODEL_LABLE: clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl",
+        #ADABOOST_MODEL_LABLE: clfs_dir+"Valchiavenna_AdaBoost.pkl",
+        CALIBRATED_ADABOOST_MODEL_LABLE: clfs_dir+"Valchiavenna_AdaBoost Calibrated.pkl",
+        NEURAL_NETWORK_MODEL_LABEL: clfs_dir+"Valchiavenna_Neural Network.pkl",
+
     }
-    testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points.csv"
+    #testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points.csv"
+    testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv"
     #preparation(ld_dir+"1.factors", M=1, N=5)
-    #Lombardy(clfs, ld_dir, factor_dirs, testset_path)
+    Lombardy(clfs, ld_dir, factor_dirs, testset_path)
     #Lombardy_WithChunk()
-    check_factors()
+    #check_factors()

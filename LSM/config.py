@@ -8,6 +8,7 @@ rFactors = ['dtm', 'east', 'ndvi', 'north', 'faults',
         'plan','profile','twi']
 
 categorical_factors = ['dusaf','faults','rivers','roads']
+# categorical_factors = ['dusaf','faults','rivers','roads', 'plan', 'profile'] # add to check if plan/profile should be used as categorical factor
 continuous_factors = [x for x in rFactors if x not in categorical_factors]
 #print(f"{len(rFactors)} = {len(categorical_factors)} + {len(continuous_factors)}")
 
