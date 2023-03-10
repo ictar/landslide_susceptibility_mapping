@@ -1,4 +1,5 @@
 from time import time
+from datetime import datetime
 from config import *
 from processing import *
 
@@ -115,14 +116,17 @@ def Lombardy(clfs, ld_dir, factor_dirs, testset_path):
 def Lombardy_WithChunk():
     ld_dir = base_dir + r"Lombardy/"
     factor_dir = ld_dir+"1.factors/"
-    result_path = ld_dir+"3.results/"
+    result_path = ld_dir+"3.results/ensemble/"
 
     clfs_dir = base_dir + r"ValChiavenna/3.results/2nd_with/"
     clfs = {
-        BAGGING_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Bagging.pkl", "skip": True},
-        RANDOMFOREST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Forests of randomized trees.pkl", "skip": True, "skip_predict": True},
-        GRADIENT_TREE_BOOSTING_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl", "skip": True},
-        ADABOOST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_AdaBoost.pkl", "skip_predict": True},
+        #BAGGING_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Bagging.pkl", "skip": True},
+        #RANDOMFOREST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Forests of randomized trees.pkl", "skip": True, "skip_predict": True},
+        #GRADIENT_TREE_BOOSTING_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl", "skip": True},
+        #ADABOOST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_AdaBoost.pkl", "skip_predict": True},
+        #ENSEMBLE_BLEND_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Blending.pkl", "predict_from": 201382743},
+        #ENSEMBLE_STACK_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Stacking.pkl", "predict_from": 872658553},
+        ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "predict_from": 201382743},
     }
 
     column_types={'dtm': 'float32', 'east': 'float32', 'ndvi': 'float32', 'north': 'float32', 'faults': 'float32', 'rivers': 'float32', 'roads': 'float32', 'dusaf': 'float32', 'plan': 'float32', 'profile': 'float32', 'twi': 'float32'}
@@ -130,12 +134,53 @@ def Lombardy_WithChunk():
     LSM_PredictMap_WithChunk(clfs, factor_dir, result_path, need_chunk=False, column_types=column_types, chunk_size=PROCESS_BATCH_SIZE, pred_batch_size=PREDICT_BATCH_SIZE)
 
 
+def evaluation(testset_path, model_path, model_label, save_to):
+    print(f"""# Evaluation of {model_label} ({datetime.now()})
+    
+    [DIR]
+    testset path: {testset_path}
+    model path: {model_path}
+    result path: {save_to}""")
+
+    clf = load_model(model_path)
+    ## testing samples
+    _, testingPoints = get_train_test(
+        None,
+        testset_path
+    )
+    test_xs, test_y = get_X_Y(testingPoints)
+    test_xs = test_xs[clf.feature_names_in_]
+    # test
+    Ytest_pred = clf.predict_proba(test_xs)
+    evaluation_report(test_y, Ytest_pred, model_label, save_to=save_to)
 
 def check_factors():
     ld_dir = base_dir + r"Lombardy/"
     factor_dir = ld_dir+"1.factors"
     #load_rasters(factor_dir)
     get_factors_meta(factor_dir)
+
+def plot_evaluation():
+    test_info = [
+        {
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points.csv",
+        },
+        {
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv",
+        }
+    ]
+    vc_dir = base_dir + r"ValChiavenna/"
+    clfs = {
+        BAGGING_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Bagging.pkl", "color": 'tab:orange'},
+        RANDOMFOREST_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Forests of randomized trees.pkl", "color": 'tab:green'},
+        CALIBRATED_ADABOOST_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_AdaBoost Calibrated.pkl", "color": 'tab:purple'},
+        GRADIENT_TREE_BOOSTING_MODEL_LABLE:  {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Gradient Tree Boosting.pkl", "color": 'tab:brown'},
+        NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/NNLogistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},
+    }
+
+    for info in test_info:
+        print(info["testset_path"])
+        plot_LSM_evaluation(info["testset_path"], clfs)
 
 if __name__ == '__main__':
 
@@ -148,15 +193,36 @@ if __name__ == '__main__':
     clfs = {
         #BAGGING_MODEL_LABLE: clfs_dir+"Valchiavenna_Bagging.pkl",
         #RANDOMFOREST_MODEL_LABLE: clfs_dir+"Valchiavenna_Forests of randomized trees.pkl",
-        #GRADIENT_TREE_BOOSTING_MODEL_LABLE: clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl",
         #ADABOOST_MODEL_LABLE: clfs_dir+"Valchiavenna_AdaBoost.pkl",
-        CALIBRATED_ADABOOST_MODEL_LABLE: clfs_dir+"Valchiavenna_AdaBoost Calibrated.pkl",
-        NEURAL_NETWORK_MODEL_LABEL: clfs_dir+"Valchiavenna_Neural Network.pkl",
+        #CALIBRATED_ADABOOST_MODEL_LABLE: clfs_dir+"Valchiavenna_AdaBoost Calibrated.pkl",
+        #GRADIENT_TREE_BOOSTING_MODEL_LABLE: clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl",
+        #NEURAL_NETWORK_MODEL_LABEL: clfs_dir+"NNlogistic/Valchiavenna_Neural Network.pkl",
+        ENSEMBLE_STACK_MODEL_LABEL: clfs_dir+"ensemble/Valchiavenna_Ensemble Stacking.pkl",
+        ENSEMBLE_BLEND_MODEL_LABEL: clfs_dir+"ensemble/Valchiavenna_Ensemble Blending.pkl",
+        ENSEMBLE_SOFT_VOTING_MODEL_LABEL: clfs_dir+"ensemble/Valchiavenna_Ensemble Soft Voting.pkl",
 
     }
     #testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points.csv"
-    testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv"
+    #testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv"
     #preparation(ld_dir+"1.factors", M=1, N=5)
-    Lombardy(clfs, ld_dir, factor_dirs, testset_path)
-    #Lombardy_WithChunk()
+    #Lombardy(clfs, ld_dir, factor_dirs, testset_path)
+    Lombardy_WithChunk()
     #check_factors()
+    """ Evaluation using the test dataset
+    test_info = [
+        {
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points.csv",
+            "save_to": ld_dir + "/3.results/testingpoints_in_whole_region/emsemble/"
+        },
+        {
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv",
+            "save_to": ld_dir+"/3.results/testingpoints_without_3regions/emsemble"
+        }
+    ]
+    for model_label, model_path in clfs.items():
+        #save_to = ld_dir + "/3.results/testingpoints_in_whole_region/NNlogistic"
+        save_to = ld_dir+"/3.results/testingpoints_without_3regions/NNlogistic"
+        for info in test_info:
+            evaluation(info["testset_path"], model_path, model_label, info["save_to"])
+    """
+    #plot_evaluation()

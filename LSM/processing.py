@@ -2,10 +2,12 @@ import pandas as pd
 import geopandas as gpd
 import rasterio
 import numpy as np
+np.set_printoptions(precision=14)
 from matplotlib import pyplot as plt
 import joblib
 
 from time import time
+from datetime import datetime
 import os
 import gc
 import warnings
@@ -409,9 +411,17 @@ def gaussian_process(X, Y, Xtest, Ytest,
 
 from sklearn.neural_network import MLPClassifier
 NEURAL_NETWORK_MODEL_LABEL = "Neural Network"
-DEFAULT_NEURAL_NETWORK_MODEL_PARAS = {}
+DEFAULT_NEURAL_NETWORK_MODEL_PARAS = {
+    "hidden_layer_sizes": (100,),
+    "activation": 'relu',
+    "solver": 'adam',
+    "alpha": 0.0001,
+    "learning_rate": 'constant',
+    "max_iter": 200,
+}
 def neural_network(X, Y, Xtest, Ytest,
             model_paras=DEFAULT_NEURAL_NETWORK_MODEL_PARAS, save_to=None):
+    print(f"{NEURAL_NETWORK_MODEL_LABEL} Parameters: {model_paras}")
     # train
     clf = MLPClassifier(**model_paras).fit(X, Y)
     # test
@@ -420,6 +430,161 @@ def neural_network(X, Y, Xtest, Ytest,
     evaluation_report(Ytest, Ytest_pred, "Model Neural Network", save_to)
     return clf
 
+DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS = DEFAULT_NEURAL_NETWORK_MODEL_PARAS
+DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS["activation"] = 'logistic'
+DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS['alpha'] = 0.01
+# TOFIX:  ConvergenceWarning: Stochastic Optimizer: Maximum iterations (200) reached and the optimization hasn't converged yet.
+DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS["max_iter"] = 500
+def NN_wrapper(X, Y, Xtest, Ytest, save_to=None):
+        model_paras = DEFAULT_NEURAL_NETWORK_MODEL_PARAS
+        #model_paras['hidden_layer_sizes'] = (100,50)
+        model_paras["activation"] = 'logistic'
+        model_paras['alpha'] = 0.01
+        #model_paras["max_iter"] = 500
+        return neural_network(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
+
+# TOTEST: stacking model
+from sklearn.ensemble import StackingClassifier as Stacker
+from sklearn.linear_model import LogisticRegression
+ENSEMBLE_STACK_MODEL_LABEL = "Ensemble Stacking"
+# final_estimatorestimator: default=None. Aclassifier which will be used to combine the base estimators. The default classifier is a LogisticRegression.
+DEFAULT_ENSEMBLE_STACK_MODEL_PARAS = {
+    "estimators": [
+        ("RandomForest", RandomForestClassifier(**DEFAULT_RANDOMFOREST_MODEL_PARAS)),
+        ("AdaBoostCalibrated", CalibratedClassifierCV(AdaBoostClassifier(**DEFAULT_CALIBRATED_ADABOOST_MODEL_PARAS))),
+        ("NeuralNetworksAndLR", MLPClassifier(**DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS)),
+    ],
+    # TOFIX: LineSearchWarning: The line search algorithm did not converge
+    # ref: https://stats.stackexchange.com/questions/184017/how-to-fix-non-convergence-in-logisticregressioncv
+    "final_estimator": LogisticRegression(max_iter=1000, solver='sag'),
+    "n_jobs": -1,
+    "stack_method": "predict_proba",
+}
+def ensemble_stack(X, Y, Xtest, Ytest,
+            model_paras=DEFAULT_ENSEMBLE_STACK_MODEL_PARAS, save_to=None):
+    print("Stacker parameters: ", model_paras)
+    # train
+    clf = Stacker(**model_paras).fit(X, Y)
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+    ## test result evaluation
+    evaluation_report(Ytest, Ytest_pred, "Model Ensemble / Stacking", save_to)
+    return clf
+
+# TOTEST: blending model
+# ref: https://www.geeksforgeeks.org/ensemble-methods-in-python/
+# ref: https://towardsdatascience.com/ensemble-learning-stacking-blending-voting-b37737c4f483
+# ref: https://machinelearningmastery.com/blending-ensemble-machine-learning-with-python/
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+ENSEMBLE_BLEND_MODEL_LABEL = "Ensemble Blending"
+DEFAULT_ENSEMBLE_BLEND_MODEL_PARAS = {
+    "estimators": [
+        ("RandomForest", RandomForestClassifier(**DEFAULT_RANDOMFOREST_MODEL_PARAS)),
+        ("AdaBoostCalibrated", CalibratedClassifierCV(AdaBoostClassifier(**DEFAULT_CALIBRATED_ADABOOST_MODEL_PARAS))),
+        ("NeuralNetworksAndLR", MLPClassifier(**DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS)),
+    ],
+    "final_estimator": LogisticRegression(max_iter=1000, solver='sag'),
+    "validate_percentage": 0.2,
+    "blend_method": "predict_proba",
+}
+
+class BlendingClassifier:
+    def __init__(self, estimators, final_estimator, blend_method="predict_proba", validate_percentage=0.2):
+        self.estimators_ = estimators
+        self.blender = final_estimator
+        self.validate_percentage = validate_percentage
+        self.feature_names_in_ = None
+        self.blend_method = blend_method
+
+
+    # Fit the estimators.
+    def fit(self, X, y):
+        Xtrain, Xval, Ytrain, Yval = train_test_split(X, y, test_size=self.validate_percentage)
+        ## fit all models on the training set and predict on hold out set
+        meta_X = []
+        for name, model in self.estimators_:
+            # fit in training set
+            model = model.fit(Xtrain, Ytrain)
+            if self.feature_names_in_ is None:
+                self.feature_names_in_ = model.feature_names_in_
+            # predict on hold out set
+            yhat = None
+            if self.blend_method == 'predict_proba':
+                yhat = model.predict_proba(Xval)
+            elif self.blend_method == 'predict':
+                yhat = model.predict(Xval)
+                # reshape predictions into a matrix with one column
+                print(f"Blend base estimator: yhat.shape={yhat.shape}, yhat.len={len(yhat)}")
+                yhat = yhat.reshape(-1, 1)
+                print(f"Blend base estimator after reshape: yhat.shape={yhat.shape}, yhat.len={len(yhat)}")
+            # store predictions as input for blending
+            meta_X.append(yhat)
+
+        ## create 2d array from predictions, each set is an input feature
+        meta_X = np.hstack(meta_X)
+        ## fit on predictions from base models
+        self.blender = self.blender.fit(meta_X, Yval)
+        return self
+
+    def predict_proba(self, X):
+        # make predictions with base models
+        meta_X = list()
+        for name, model in self.estimators_:
+            # predict with base model
+            yhat = None
+            if self.blend_method == 'predict_proba':
+                yhat = model.predict_proba(X)
+            elif self.blend_method == 'predict':
+                yhat = model.predict(X)
+                # reshape predictions into a matrix with one column
+                print(f"Blend base estimator: yhat.shape={yhat.shape}, yhat.len={len(yhat)}")
+                yhat = yhat.reshape(-1, 1)
+                print(f"Blend base estimator after reshape: yhat.shape={yhat.shape}, yhat.len={len(yhat)}")
+            # store prediction
+            meta_X.append(yhat)
+        # create 2d array from predictions, each set is an input feature
+        meta_X = np.hstack(meta_X)
+        # predict
+        return self.blender.predict_proba(meta_X)
+
+def ensemble_blend(X, Y, Xtest, Ytest,
+            model_paras=DEFAULT_ENSEMBLE_BLEND_MODEL_PARAS, save_to=None):
+    print(f"{ENSEMBLE_BLEND_MODEL_LABEL} parameters: {model_paras}")
+    # fit ensemble
+    clf = BlendingClassifier(**model_paras).fit(X, Y)
+
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+
+    ## test result evaluation
+    evaluation_report(Ytest, Ytest_pred, "Model Ensemble / Blending", save_to)
+
+    return clf
+    
+# TOTEST: Weighted Average Probabilities (Soft Voting)
+# ref: https://scikit-learn.org/stable/modules/ensemble.html#weighted-average-probabilities-soft-voting
+# ref: https://machinelearningmastery.com/weighted-average-ensemble-with-python/
+from sklearn.ensemble import VotingClassifier
+ENSEMBLE_SOFT_VOTING_MODEL_LABEL = "Ensemble Soft Voting"
+DEFAULT_ENSEMBLE_SOFT_VOTING_MODEL_PARAS = {
+    "estimators": [
+        ("RandomForest", RandomForestClassifier(**DEFAULT_RANDOMFOREST_MODEL_PARAS)),
+        ("AdaBoostCalibrated", CalibratedClassifierCV(AdaBoostClassifier(**DEFAULT_CALIBRATED_ADABOOST_MODEL_PARAS))),
+        ("NeuralNetworksAndLR", MLPClassifier(**DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS)),
+    ],
+    "voting": "soft",
+}
+def ensemble_soft_voting(X, Y, Xtest, Ytest,
+            model_paras=DEFAULT_ENSEMBLE_SOFT_VOTING_MODEL_PARAS, save_to=None):
+    print(f"{ENSEMBLE_SOFT_VOTING_MODEL_LABEL} parameters: {model_paras}")
+    # train
+    clf = VotingClassifier(**model_paras).fit(X, Y)
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+    ## test result evaluation
+    evaluation_report(Ytest, Ytest_pred, "Model Ensemble / Weighted Average Probabilities (Soft Voting)", save_to)
+    return clf
 
 def load_model(model_path):
     return joblib.load(model_path)
@@ -456,6 +621,50 @@ def plot_LSM_prediction(target_pred, raster_info, mask, model_label, save_to=Non
     print(f"LSM+NLZ == {np.unique(outmap['LSM']+outmap['NLZ'])}")
 
     return outmap
+
+def plot_LSM_evaluation(testset_path, clfs):
+    ## testing samples
+    _, testingPoints = get_train_test(
+        None,
+        testset_path
+    )
+    test_xs, y_true = get_X_Y(testingPoints)
+
+    for model_label, info in clfs.items():
+        clf = load_model(info["path"])
+        test_xs = test_xs[clf.feature_names_in_]
+        info["y_pred"] = clf.predict_proba(test_xs)
+        
+    
+    # plot ROC
+    plt.plot([0,1], [0,1], linestyle='--', label='No Skill')
+    for model_label, info in clfs.items():
+        y_pred = info["y_pred"]
+        fpr, tpr, _ = metrics.roc_curve(y_true, y_pred[:,1])
+
+        # plot the roc curve for the model
+        plt.plot(fpr, tpr, color=info["color"],label=model_label)
+
+    # axis labels
+    plt.xlabel('False Positive Rate')
+    plt.ylabel('True Positive Rate')
+    plt.grid(True,'major',linewidth=0.3)
+    plt.legend()
+    plt.show()
+
+    # plot the PRC
+    plt.plot([0,1], [1,0], linestyle='--', label='No Skill')
+    for model_label, info in clfs.items():
+        y_pred = info["y_pred"]
+        precision, recall, _ = metrics.precision_recall_curve(y_true, y_pred[:,1])
+    
+        plt.plot(recall, precision, color=info["color"], label=model_label)
+    #plt.grid(True,'major',linewidth=0.3)
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.legend()
+    plt.show()
+
 
 def mapping(target_xs, clf, model_label,raster_info, mask, save_to):
     #print(f"[Mapping] Model: {model_label}")
@@ -526,7 +735,7 @@ def bigdata_predict(clf, model_label, target_path, dtype, chunk_size, clf_pred_d
     target_y_pred = []
     for i, target_xs in enumerate(target_xs_iter):
         if i == 0:
-            print(f"""[{model_label}] Handling target chunck {target_path}...
+            print(f"""[{model_label}] {datetime.now()} Handling target chunck {target_path}...
 
             Target:
                 Columns = {target_xs.dtypes}
@@ -653,8 +862,18 @@ def optimalPRCthreshold(y_true, y_pred, model_label, save_to=None):
     print('\n###  CLASSIFICATION BASED ON OPTIMAL THRESHOLD FROM PRC\n')
 
     precision, recall, thresholds = metrics.precision_recall_curve(y_true, y_pred[:,1])
+    print(f"""
+    Precision: {precision[:10]}
+    Recall: {recall[:10]}
+    Thresholds: {thresholds[:10]}
+    """)
     # convert to f score
-    fscore = (2 * precision * recall) / (precision + recall)
+    ## TOFIX: when precision=0 and recall=0
+    tmp_prec_rec = precision+recall
+    tmp_precision = precision[tmp_prec_rec!=0]
+    tmp_recall = recall[tmp_prec_rec!=0]
+    fscore = (2 * tmp_precision * tmp_recall) / (tmp_precision + tmp_recall)
+    #fscore = (2 * precision * recall) / (precision + recall)
     # locate the index of the largest f score
     ix = np.argmax(fscore)
     best_thresh = thresholds[ix]
@@ -711,8 +930,13 @@ Best Threshold={best_thresh}
 AUCROC: {metrics.roc_auc_score(y_true, y_predRnewT)}""")
 
 def evaluation_report(y_true, y_pred, model_label, save_to):
+    if not os.path.exists(save_to):
+        os.makedirs(save_to)
+
     precision, recall, fscore,_ = metrics.precision_recall_fscore_support(
         y_true, [round(num) for num in y_pred[:,1]])
+    # FPR = 1 - TNR and TNR = specificity
+    # to calculate TNR we need to set the positive label to the other class, so pos_label=0
     FPR = 1- metrics.recall_score(y_true,  [round(num) for num in y_pred[:,1]], pos_label = 0)
     
     print(f"""
@@ -748,11 +972,21 @@ def evaluation_report(y_true, y_pred, model_label, save_to):
     plt.ylabel('True Positive Rate')
     plt.grid(True,'major',linewidth=0.3)
     plt.legend()
-    tmp_save_path = os.path.join(save_to, f"ROC_{_modelname2filename(model_label)}")
-    plt.savefig(tmp_save_path)
-    print(f"![ROC]({tmp_save_path}.png)")
+    if save_to:
+        tmp_save_path = os.path.join(save_to, f"ROC_{_modelname2filename(model_label)}")
+        plt.savefig(tmp_save_path)
+        print(f"![ROC]({tmp_save_path}.png)")
+    else:
+        plt.show()
 
     precision, recall, thresholds = metrics.precision_recall_curve(y_true, y_pred[:,1])
+    print(f"""
+    Precision: {precision[-10:]}
+    Recall: {recall[-10:]}
+    Thresholds: {thresholds[-10:]}
+    Count of probability = 1: {np.count_nonzero(y_pred == 1)}
+    Count of probability = 0: {np.count_nonzero(y_pred == 0)}
+    """)
     # plot the roc curve for the model
     plt.figure()
     plt.plot([0,1], [1,0], linestyle='--', label='No Skill')
@@ -761,9 +995,11 @@ def evaluation_report(y_true, y_pred, model_label, save_to):
     plt.xlabel('Recall')
     plt.ylabel('Precision')
     plt.legend()
-    tmp_save_path = os.path.join(save_to, f"PRC{_modelname2filename(model_label)}")
-    plt.savefig(tmp_save_path)
-    print(f"![PRC]({tmp_save_path}.png)")
+    if save_to:
+        tmp_save_path = os.path.join(save_to, f"PRC{_modelname2filename(model_label)}")
+        plt.savefig(tmp_save_path)
+        print(f"![PRC]({tmp_save_path}.png)")
+    else: plt.show()
 
     optimalROCthreshold(y_true, y_pred, model_label, save_to)
 
@@ -799,13 +1035,15 @@ ALGORITHMS = {
 
 def LSM(ROI_label, factor_dir, trainset_path, testset_path, result_path, preprocess=None, algorithms=ALGORITHMS):
 
-    print(f"""# {ROI_label}
+    print(f"""# {ROI_label} ({datetime.now()})
     [DIR]
     Factor dir: {factor_dir}
     Train set path: {trainset_path}
     Test set path: {testset_path}
     Result path: {result_path}
     """)
+    if not os.path.exists(result_path):
+        os.makedirs(result_path)
 
     # 1. input data
     print("## Input Data")

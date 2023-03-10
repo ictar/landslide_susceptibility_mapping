@@ -10,10 +10,14 @@ def Valchiavenna_v1_without():
     factor_dir = vc_dir+"1.factors"
     trainset_path = vc_dir+"/2.samples/1st_without/UpperValtellina_ValTartano_training_points.csv"
     testset_path = vc_dir+"/2.samples/1st_without/Valchiavenna_LSM_testing_points.csv"
-    result_path = vc_dir+"3.results/1st_without/"
+    result_path = vc_dir+"3.results/1st_without/ensemble/"
     #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
     algorithms={
-        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost
+        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
+        #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
+        ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack,
+        ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
+        ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,
     }
         
     LSM('Valchiavenna', factor_dir, trainset_path, testset_path, result_path, preprocess=None, algorithms=algorithms)
@@ -23,11 +27,15 @@ def Valchiavenna_v2_with():
     factor_dir = vc_dir+"1.factors"
     trainset_path = vc_dir+"/2.samples/2nd_with/UpperValtellina_ValTartano_Valchiavenna_LSM_training_points.csv"
     testset_path = vc_dir+"/2.samples/2nd_with/Valchiavenna_LSM_testing_points.csv"
-    result_path = vc_dir+"3.results/2nd_with/"
+    result_path = vc_dir+"3.results/2nd_with/ensemble/"
 
     #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
     algorithms={
-        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost
+        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
+        #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
+        ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack,
+        ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
+        ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,
     }
         
     clfs = LSM('Valchiavenna', factor_dir, trainset_path, testset_path, result_path, preprocess=None, algorithms=algorithms)
@@ -37,11 +45,15 @@ def Valchiavenna_v3_onlyVC():
     factor_dir = vc_dir+"1.factors"
     trainset_path = vc_dir+"/2.samples/3rd_onlyVC/ValChiavenna_LSM_training_points.csv"
     testset_path = vc_dir+"/2.samples/3rd_onlyVC/Valchiavenna_LSM_testing_points.csv"
-    result_path = vc_dir+"3.results/3rd_onlyVC/"
+    result_path = vc_dir+"3.results/3rd_onlyVC/ensemble/"
 
     #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
     algorithms={
-        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost
+        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
+        #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
+        ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack,
+        ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
+        ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,
     }
         
     LSM('Valchiavenna', factor_dir, trainset_path, testset_path, result_path, preprocess=None, algorithms=algorithms)
@@ -88,10 +100,51 @@ def Valchiavenna_v2_with_result_evaluation():
         plt.colorbar()
         plt.savefig(os.path.join(result_path, f"LSM_{_modelname2filename(model_label)}"))
 
+def plot_evaluation():
+    vc_dir = base_dir + r"ValChiavenna/"
+
+    info = {
+        "1_without": {
+            "testset_path": vc_dir+"/2.samples/1st_without/Valchiavenna_LSM_testing_points.csv",
+            "clfs": {
+                BAGGING_MODEL_LABLE: {"path": vc_dir+"3.results/1st_without/Valchiavenna_Bagging.pkl", "color": 'tab:orange'},
+                RANDOMFOREST_MODEL_LABLE: {"path": vc_dir+"3.results/1st_without/Valchiavenna_Forests of randomized trees.pkl", "color": 'tab:green'},
+                CALIBRATED_ADABOOST_MODEL_LABLE: {"path": vc_dir+"3.results/1st_without/Valchiavenna_AdaBoost Calibrated.pkl", "color": 'tab:purple'},
+                GRADIENT_TREE_BOOSTING_MODEL_LABLE:  {"path": vc_dir+"3.results/1st_without/Valchiavenna_Gradient Tree Boosting.pkl", "color": 'tab:brown'},
+                NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/NNLogistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},
+            }
+        },
+        "2_with": {
+            "testset_path":vc_dir+"/2.samples/2nd_with/Valchiavenna_LSM_testing_points.csv",
+            "clfs": {
+                BAGGING_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Bagging.pkl", "color": 'tab:orange'},
+                RANDOMFOREST_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Forests of randomized trees.pkl", "color": 'tab:green'},
+                CALIBRATED_ADABOOST_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_AdaBoost Calibrated.pkl", "color": 'tab:purple'},
+                GRADIENT_TREE_BOOSTING_MODEL_LABLE:  {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Gradient Tree Boosting.pkl", "color": 'tab:brown'},
+                NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/NNLogistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},
+            }
+        },
+        "3_onlywith": {
+            "testset_path":vc_dir+"/2.samples/3rd_onlyVC/Valchiavenna_LSM_testing_points.csv",
+            "clfs": {
+                BAGGING_MODEL_LABLE: {"path": vc_dir+"3.results/3rd_onlyVC/Valchiavenna_Bagging.pkl", "color": 'tab:orange'},
+                RANDOMFOREST_MODEL_LABLE: {"path": vc_dir+"3.results/3rd_onlyVC/Valchiavenna_Forests of randomized trees.pkl", "color": 'tab:green'},
+                CALIBRATED_ADABOOST_MODEL_LABLE: {"path": vc_dir+"3.results/3rd_onlyVC/Valchiavenna_AdaBoost Calibrated.pkl", "color": 'tab:purple'},
+                GRADIENT_TREE_BOOSTING_MODEL_LABLE:  {"path": vc_dir+"3.results/3rd_onlyVC/Valchiavenna_Gradient Tree Boosting.pkl", "color": 'tab:brown'},
+                NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/NNLogistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},
+            }
+        },
+    }
+ 
+    for key in info:
+        print(f"Handling {key}")
+        plot_LSM_evaluation(info[key]["testset_path"], info[key]["clfs"])
+
 if __name__ == '__main__':
     #Valchiavenna_v1_without()
     #Valchiavenna_v2_with()
-    Valchiavenna_v3_onlyVC()
+    #Valchiavenna_v3_onlyVC()
     #check_factors()
     #Valchiavenna_v1_without_result_evaluation()
     #Valchiavenna_v2_with_result_evaluation()
+    plot_evaluation()
