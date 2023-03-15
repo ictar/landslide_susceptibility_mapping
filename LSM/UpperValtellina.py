@@ -87,15 +87,32 @@ def evaluation(testset_path, model_path, model_label):
 def plot_evaluation():
     uv_dir = base_dir + r"Upper Valtellina/"
     testset_path = uv_dir+"2.samples/UpperValtellina_LSM_testing_points.csv"
-    clfs = {
-        BAGGING_MODEL_LABLE: {"path": uv_dir+"3.results/Upper Valtellina_Bagging.pkl", "color": 'tab:orange'},
-        RANDOMFOREST_MODEL_LABLE: {"path": uv_dir+"3.results/Upper Valtellina_Fortests of randomized trees.pkl", "color": 'tab:green'},
-        CALIBRATED_ADABOOST_MODEL_LABLE: {"path": uv_dir+"3.results.tune/AdaboostCalibrated/Upper Valtellina_AdaBoost Calibrated.pkl", "color": 'tab:purple'},
-        GRADIENT_TREE_BOOSTING_MODEL_LABLE:  {"path": uv_dir+"3.results/Upper Valtellina_Gradient Tree Boosting.pkl", "color": 'tab:brown'},
-        NEURAL_NETWORK_MODEL_LABEL: {"path": uv_dir+"3.results.tune/NNLogistic/Upper Valtellina_Neural Network.pkl", "color": 'tab:pink'},
+    
+    all_clfs = {
+        "basic": {
+            BAGGING_MODEL_LABLE: {"path": uv_dir+"3.results/Upper Valtellina_Bagging.pkl", "color": 'tab:orange'},
+            RANDOMFOREST_MODEL_LABLE: {"path": uv_dir+"3.results/Upper Valtellina_Fortests of randomized trees.pkl", "color": 'tab:green'},
+            CALIBRATED_ADABOOST_MODEL_LABLE: {"path": uv_dir+"3.results.tune/AdaboostCalibrated/Upper Valtellina_AdaBoost Calibrated.pkl", "color": 'tab:purple'},
+            GRADIENT_TREE_BOOSTING_MODEL_LABLE:  {"path": uv_dir+"3.results/Upper Valtellina_Gradient Tree Boosting.pkl", "color": 'tab:brown'},
+            NEURAL_NETWORK_MODEL_LABEL: {"path": uv_dir+"3.results.tune/NNLogistic/Upper Valtellina_Neural Network.pkl", "color": 'tab:pink'},
+        },
+        "ensemble": {
+            ENSEMBLE_STACK_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Stacking.pkl", "color": 'tab:orange'},
+            ENSEMBLE_BLEND_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Blending.pkl", "color": 'tab:green'},
+            ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Soft Voting.pkl", "color": 'tab:brown'},
+        }
     }
-
-    plot_LSM_evaluation(testset_path, clfs)
+    clfs = all_clfs["ensemble"]
+    result_path = uv_dir+"3.results/ensemble/"
+    plot_LSM_evaluation(testset_path, clfs, result_path)
+    reports = {}
+    for model_lable in clfs:
+        print()
+        reports[model_lable] = evaluation_with_testset(testset_path, clfs[model_lable]["path"], model_lable, save_to=result_path)
+    #print(reports)
+    import json
+    with open(os.path.join(result_path, "report.json"), "w") as f:
+        json.dump(reports, f)
 
 if __name__ == '__main__':
     #UpperValtellina()
