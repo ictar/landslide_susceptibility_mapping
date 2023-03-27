@@ -6,7 +6,8 @@ from qgis.core import (
     )
 from qgis.PyQt.QtCore import QVariant
 
-config_path = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/Materials/landslide_scripts"
+#config_path = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/Materials/master_thesis/landslide_scripts"
+config_path = r"C:\\xuqiongjie\\landslide_scripts"
 import sys
 if config_path not in sys.path: sys.path.append(config_path)
 from config import *
@@ -311,11 +312,13 @@ def sampling_test(total):
 
     glog.pushInfo(f"[BEGIN] sampling_test / hazard = {hazard_cnt}, no_hazard = {no_hazard_cnt}")
     hazard = data_dir + 'hazard.gpkg'
+    _point_sampling(layer, f'"{hazard_field}"=1', hazard_cnt, 5, output=hazard)
     #_point_sampling(layer, f'"{hazard_field}"=1', hazard_cnt, ref_pixel_size, output=hazard)
-    _point_sampling(layer, f""""{hazard_field}"=1 and "{train_test_field}"='{test_attr}'""", hazard_cnt, ref_pixel_size, output=hazard)
+    #_point_sampling(layer, f""""{hazard_field}"=1 and "{train_test_field}"='{test_attr}'""", hazard_cnt, ref_pixel_size, output=hazard)
     no_hazard = data_dir + 'no_hazard.gpkg'
+    _point_sampling(layer, f'"{hazard_field}"=0', no_hazard_cnt, 5, output=no_hazard)
     #_point_sampling(layer, f'"{hazard_field}"=0', no_hazard_cnt, ref_pixel_size, output=no_hazard)
-    _point_sampling(layer, f""""{hazard_field}"=0 and "{train_test_field}"='{test_attr}'""", no_hazard_cnt, ref_pixel_size, output=no_hazard)
+    #_point_sampling(layer, f""""{hazard_field}"=0 and "{train_test_field}"='{test_attr}'""", no_hazard_cnt, ref_pixel_size, output=no_hazard)
     glog.pushInfo(f"[END] sampling_test / hazard = {hazard_cnt}, no_hazard = {no_hazard_cnt}")
 
     # merge separately the hazard layers and no_hazard layers into one point layer
@@ -340,5 +343,5 @@ def sampling_test(total):
     
     glog.pushInfo(f"[END] sampling_test")
 
-factor_sampling()
-#sampling_test(2*200*1000)
+#factor_sampling()
+sampling_test(2*200*1000)

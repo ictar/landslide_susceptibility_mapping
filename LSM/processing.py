@@ -16,6 +16,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 from config import *
 from preprocessing import *
 from models import *
+from evaluation import *
 from utils import _modelname2filename, load_model
 
 # TOAVOID: https://stackoverflow.com/questions/40115043/no-space-left-on-device-error-while-fitting-sklearn-model
@@ -37,73 +38,23 @@ def plot_prediction(target_pred, raster_info, mask, title, save_to=None):
     
     return outmapG
 
-def plot_LSM_prediction(target_pred, raster_info, mask, model_label, save_to=None):
+def plot_LSM_prediction(target_pred, raster_info, mask, model_label, save_to=None, LSM_idx=1):
     outmap = {}
     # LSM
     title = f'Probability of Landslide - {model_label}'
     save_lsm_to = os.path.join(save_to, f"LSM_{_modelname2filename(model_label)}")
-    outmap['LSM'] = plot_prediction(target_pred[:,1], raster_info, mask, title, save_lsm_to)
+    outmap['LSM'] = plot_prediction(target_pred[:,LSM_idx], raster_info, mask, title, save_lsm_to)
 
     # NLZ
-    title = f'Probability of No Landslide - {model_label}'
-    save_nlz_to = os.path.join(save_to, f"NLZ_{_modelname2filename(model_label)}")
-    outmap['NLZ'] = plot_prediction(target_pred[:,0], raster_info, mask, title, save_nlz_to)
+    if target_pred.shape[1] > 1:
+        title = f'Probability of No Landslide - {model_label}'
+        save_nlz_to = os.path.join(save_to, f"NLZ_{_modelname2filename(model_label)}")
+        outmap['NLZ'] = plot_prediction(target_pred[:,0], raster_info, mask, title, save_nlz_to)
 
-    # TOCHECK
-    print(f"LSM+NLZ == {np.unique(outmap['LSM']+outmap['NLZ'])}")
+        # TOCHECK
+        print(f"LSM+NLZ == {np.unique(outmap['LSM']+outmap['NLZ'])}")
 
     return outmap
-
-from sklearn.calibration import CalibrationDisplay
-def plot_LSM_evaluation(testset_path, clfs, save_to=None):
-    ## testing samples
-    _, testingPoints = get_train_test(
-        None,
-        testset_path
-    )
-    test_xs, y_true = get_X_Y(testingPoints)
-
-    for model_label, info in clfs.items():
-        clf = load_model(info["path"])
-        test_xs = test_xs[clf.feature_names_in_]
-        info["y_pred"] = clf.predict_proba(test_xs)
-        info['clf'] = clf
-        
-    
-    # plot ROC
-    plt.figure()
-    plt.plot([0,1], [0,1], linestyle='--', label='No Skill')
-    for model_label, info in clfs.items():
-        y_pred = info["y_pred"]
-        fpr, tpr, _ = metrics.roc_curve(y_true, y_pred[:,1])
-
-        # plot the roc curve for the model
-        plt.plot(fpr, tpr, color=info["color"],label=model_label)
-
-    # axis labels
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.grid(True,'major',linewidth=0.3)
-    plt.legend()
-    if save_to:
-        plt.savefig(os.path.join(save_to, "ROC_models"))
-    else: plt.show()
-
-    # plot the PRC
-    plt.figure()
-    plt.plot([0,1], [1,0], linestyle='--', label='No Skill')
-    for model_label, info in clfs.items():
-        y_pred = info["y_pred"]
-        precision, recall, _ = metrics.precision_recall_curve(y_true, y_pred[:,1])
-    
-        plt.plot(recall, precision, color=info["color"], label=model_label)
-    #plt.grid(True,'major',linewidth=0.3)
-    plt.xlabel('Recall')
-    plt.ylabel('Precision')
-    plt.legend()
-    if save_to:
-        plt.savefig(os.path.join(save_to, "PRC_models"))
-    else: plt.show()
     
 
 def mapping(target_xs, clf, model_label,raster_info, mask, save_to):
@@ -142,26 +93,50 @@ def bigdata_mapping(model_label, clf_pred_dir, save_to, raster_info, mask, chunk
         pred_chunk_fn = os.path.join(clf_pred_dir, f"pred_{ifrom}_{ito}.csv")
         pred_chunk = np.loadtxt(pred_chunk_fn)
         # note that only pred_chunk[:,1] is used
-        target_y_pred.append(pred_chunk)
+        target_y_pred.append(pred_chunk[:,1].reshape((-1,1)))
     
     # 2. generate and save the LSM
     start = time()
     target_y_pred = np.concatenate(target_y_pred, axis=0)
-    outmap = plot_LSM_prediction(target_y_pred, raster_info, mask, model_label, save_to)
+    print(f"the shape of target_y_pred is {target_y_pred.shape}")
+    outmap = plot_LSM_prediction(target_y_pred, raster_info, mask, model_label, save_to, LSM_idx=0)
     print(f"[{model_label}] Plot Time Cost: {time()-start}")
     # save
-    with rasterio.open(
-        os.path.join(save_to, f'LSM_{model_label}.tif'),
-        'w',
-        driver='GTiff',
-        height=outmap.shape[0],
-        width=outmap.shape[1],
-        count=1,
-        dtype=outmap.dtype,
-        crs=raster_info['crs'],
-        transform=raster_info['transform'],
-    ) as dst:
-        dst.write(outmap, 1)
+    try:
+        with rasterio.open(
+            os.path.join(save_to, f'LSM_{model_label}.tif'),
+            'w',
+            driver='GTiff',
+            height=outmap['LSM'].shape[0],
+            width=outmap['LSM'].shape[1],
+            count=len(outmap),
+            dtype=outmap['LSM'].dtype,
+            crs=raster_info['crs'],
+            transform=raster_info['transform'],
+        ) as dst:
+            dst.write(outmap['LSM'], 1)
+            if 'NLZ' in outmap:
+                dst.write(outmap['NLZ'], 2)
+    except Exception as e:
+        tmp_path = r"/tmp/LSM"
+        print(e, f'\nResave to {tmp_path}')
+        if not os.path.exists(tmp_path):
+            os.makedirs(tmp_path)
+        with rasterio.open(
+            os.path.join(tmp_path, f'LSM_{model_label}.tif'),
+            'w',
+            driver='GTiff',
+            height=outmap['LSM'].shape[0],
+            width=outmap['LSM'].shape[1],
+            count=len(outmap),
+            dtype=outmap['LSM'].dtype,
+            crs=raster_info['crs'],
+            transform=raster_info['transform'],
+        ) as dst:
+            dst.write(outmap['LSM'], 1)
+            if 'NLZ' in outmap:
+                dst.write(outmap['NLZ'], 2)
+
 
     print(f"\n\n[{model_label}] Time Cost: {time()-startM}")
 
@@ -202,6 +177,7 @@ def bigdata_predict(clf, model_label, target_path, dtype, chunk_size, clf_pred_d
         target_xs = target_xs[clf.feature_names_in_]
         target_y_pred_chunk = clf.predict_proba(target_xs) # ndarray of shape (n_samples, n_classes)
         target_y_pred.append(target_y_pred_chunk)
+        print(f"...{100*(i+1)*batch_size/chunk_size:.4f}%")
 
     print(f"[{model_label}] Predict Time Cost: {time()-start}, Row cnt: {row_cnt}")
 

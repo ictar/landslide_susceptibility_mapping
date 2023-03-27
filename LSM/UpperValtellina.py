@@ -9,7 +9,7 @@ def UpperValtellina():
     factor_dir = uv_dir+"1.factors"
     trainset_path = uv_dir+"/2.samples/UpperValtellina_LSM_training_points.csv"
     testset_path = uv_dir+"/2.samples/UpperValtellina_LSM_testing_points.csv"
-    result_path = uv_dir+"3.results/ensemble/"
+    result_path = uv_dir+"3.results/"
     preprocess = None
 
     def RF_wrapper(X, Y, Xtest, Ytest, save_to=None):
@@ -23,11 +23,11 @@ def UpperValtellina():
         return ensemble_adaboost(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
 
     algorithms = {
-        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
+        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
         #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
-        ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack,
-        ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
-        ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,
+        #ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack,
+        #ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
+        #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,
     }
 
     #LSM('Upper Valtellina', factor_dir, trainset_path, testset_path, result_path, preprocess)
@@ -85,37 +85,13 @@ def evaluation(testset_path, model_path, model_label):
     evaluation_report(test_y, Ytest_pred, model_label, save_to=base_dir + r"Upper Valtellina/3.results")
 
 def plot_evaluation():
-    uv_dir = base_dir + r"Upper Valtellina/"
     testset_path = uv_dir+"2.samples/UpperValtellina_LSM_testing_points.csv"
-    
-    all_clfs = {
-        "basic": {
-            BAGGING_MODEL_LABLE: {"path": uv_dir+"3.results/Upper Valtellina_Bagging.pkl", "color": 'tab:orange'},
-            RANDOMFOREST_MODEL_LABLE: {"path": uv_dir+"3.results/Upper Valtellina_Fortests of randomized trees.pkl", "color": 'tab:green'},
-            CALIBRATED_ADABOOST_MODEL_LABLE: {"path": uv_dir+"3.results.tune/AdaboostCalibrated/Upper Valtellina_AdaBoost Calibrated.pkl", "color": 'tab:purple'},
-            GRADIENT_TREE_BOOSTING_MODEL_LABLE:  {"path": uv_dir+"3.results/Upper Valtellina_Gradient Tree Boosting.pkl", "color": 'tab:brown'},
-            NEURAL_NETWORK_MODEL_LABEL: {"path": uv_dir+"3.results.tune/NNLogistic/Upper Valtellina_Neural Network.pkl", "color": 'tab:pink'},
-        },
-        "ensemble": {
-            ENSEMBLE_STACK_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Stacking.pkl", "color": 'tab:orange'},
-            ENSEMBLE_BLEND_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Blending.pkl", "color": 'tab:green'},
-            ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Soft Voting.pkl", "color": 'tab:brown'},
-        }
-    }
-    clfs = all_clfs["ensemble"]
-    result_path = uv_dir+"3.results/ensemble/"
-    plot_LSM_evaluation(testset_path, clfs, result_path)
-    reports = {}
-    for model_lable in clfs:
-        print()
-        reports[model_lable] = evaluation_with_testset(testset_path, clfs[model_lable]["path"], model_lable, save_to=result_path)
-    #print(reports)
-    import json
-    with open(os.path.join(result_path, "report.json"), "w") as f:
-        json.dump(reports, f)
+
+    save_info = [('basic', uv_dir+"3.results/"), ("ensemble", uv_dir+"3.results/ensemble/")]
+    plot_evaluation_with_testset(testset_path, uv_clfs, save_info)
 
 if __name__ == '__main__':
-    #UpperValtellina()
+    UpperValtellina()
     #UpperValtellina_SVM_NN()
     #UpperValtellina_PredictMap_WithChunk()
     #check_factors()
@@ -124,5 +100,5 @@ if __name__ == '__main__':
     #testset_path = uv_dir+"/2.samples/UpperValtellina_LSM_testing_points.csv"
     #evaluation(testset_path,uv_dir + "/3.results/Upper Valtellina_Gradient Tree Boosting.pkl","Model Ensemble / Gradient Tree Boosting")
 
-    plot_evaluation()
+    #plot_evaluation()
     

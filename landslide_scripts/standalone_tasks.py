@@ -1,10 +1,18 @@
 import sys
+
+# TOFIX ModuleNotFoundError: No module named 'qgis'
+# export PYTHONHOME=/Applications/QGIS-LTR.app/Contents/MacOS/
+# /Applications/QGIS-LTR.app/Contents/MacOS/bin/python3 standalone_tasks.py
+
 from qgis.core import QgsApplication
 
 def main():
     #sampling_test(2*200*1000)
     #overlay_analysis(data_dir+"NLS_fixed.gpkg", ls, [isnlz_field, ], [hazard_field,])
-    check_env_raster_properties()
+    #base_data_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/"
+    #overlay_analysis(base_data_dir+"NLS_fixed.gpkg", base_data_dir+"LS_union.gpkg", [isnlz_field, ], [hazard_field,])
+    #check_env_raster_properties()
+    sampling_test(2*200*1000)
 
 
 if __name__ == '__main__':
@@ -23,7 +31,7 @@ if __name__ == '__main__':
     sys.path.append(r"/Applications/QGIS-LTR.app/Contents/PlugIns") # QGIS ver. 3.22
     # Import and initialize Processing framework
     from qgis.analysis import QgsNativeAlgorithms
-    import processing
+    #import processing
     from processing.core.Processing import Processing
     Processing.initialize() # needed to be able to use the functions afterwards
     QgsApplication.processingRegistry().addProvider(QgsNativeAlgorithms())

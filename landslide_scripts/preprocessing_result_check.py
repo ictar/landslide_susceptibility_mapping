@@ -7,7 +7,7 @@ import traceback
 import numpy as np
 from osgeo import gdal
 
-config_path = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/Materials/landslide_scripts"
+config_path = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/Materials/master_thesis/landslide_scripts"
 import sys
 if config_path not in sys.path: sys.path.append(config_path)
 from config import *
@@ -94,9 +94,9 @@ def _calculate_raster_unique_value(layer_name, bandnum=1):
 def overlay_analysis(A, B, Afs, Bfs):
     # convert both into raster
     a_tmp_r = data_dir + "tmp_a.tif"
-    #vec2raster(A, a_tmp_r, Afs[0])
+    vec2raster(A, a_tmp_r, Afs[0])
     b_tmp_r = data_dir + "tmp_b.tif"
-    #vec2raster(B, b_tmp_r, Bfs[0])
+    vec2raster(B, b_tmp_r, Bfs[0])
 
     # load
     a, a_info = _calculate_raster_unique_value(a_tmp_r)
@@ -106,7 +106,7 @@ def overlay_analysis(A, B, Afs, Bfs):
     unique, counts = np.unique(diff, return_counts=True)
     diff_info = {unique[i]: counts[i] for i in range(len(unique))}
 
-    print(f"""Layer info:
+    report = f"""Layer info:
     a.shape = {a.shape}, b.shape = {b.shape}, diff.shape = {diff.shape}
 
     -----------------------------------------------------
@@ -124,7 +124,9 @@ def overlay_analysis(A, B, Afs, Bfs):
 
     diff/A (value=1) = {diff_info.get(1, 0)/a_info.get(1, 0)}
     diff/B (value=1) = {diff_info.get(1, 0)/b_info.get(1, 0)}
-    """)
+    """
+    print(report)
+    logging.info(report)
     # remove
     #for ele in [a_tmp_r, b_tmp_r]: os.remove(ele)
 
@@ -133,6 +135,8 @@ def check_preprocess():
     check_env_raster_properties()
     #check_train_test_data()
 
+base_data_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/"
+#overlay_analysis(base_data_dir+"NLS_fixed.gpkg", base_data_dir+"LS_union.gpkg", [isnlz_field, ], [hazard_field,])
 #overlay_analysis(data_dir+"NLS_fixed.gpkg", ls, [isnlz_field, ], [hazard_field,])
 
-check_env_raster_properties()
+#check_env_raster_properties()

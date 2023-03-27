@@ -1,9 +1,10 @@
 # INPUT
 #base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/"
 #base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Lombardy/"
-base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/"
-#data_dir = base_dir + r"data/"
-data_dir = base_dir + r"1.factors/"
+base_dir = r"C:\\xuqiongjie\\"
+#base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/"
+data_dir = base_dir + r"Exclude_3basins\\"
+#data_dir = base_dir + r"1.factors/"
 processing_dir = base_dir + r"processing/"
 dtm = data_dir + "dtm.tif"
 
@@ -86,7 +87,7 @@ def set_reference_layer_properties(layer_name):
     ref_crs = ref_sr.GetAttrValue('AUTHORITY',0) + ":" + ref_sr.GetAttrValue('AUTHORITY',1)
     ref_extent = "%f,%f,%f,%f [%s]" % (ref_ext.xMinimum(), ref_ext.xMaximum(), ref_ext.yMinimum(), ref_ext.yMaximum(), ref_crs)
 
-import traceback
+import traceback, logging
 try:
     set_reference_layer_properties(dtm)
 except Exception as e:

@@ -117,7 +117,7 @@ def Lombardy(clfs, ld_dir, factor_dirs, testset_path):
 def Lombardy_WithChunk():
     ld_dir = base_dir + r"Lombardy/"
     factor_dir = ld_dir+"1.factors/"
-    result_path = ld_dir+"3.results/ensemble/"
+    result_path = ld_dir+"3.results/"
 
     clfs_dir = base_dir + r"ValChiavenna/3.results/2nd_with/"
     clfs = {
@@ -125,9 +125,11 @@ def Lombardy_WithChunk():
         #RANDOMFOREST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Forests of randomized trees.pkl", "skip": True, "skip_predict": True},
         #GRADIENT_TREE_BOOSTING_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl", "skip": True},
         #ADABOOST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_AdaBoost.pkl", "skip_predict": True},
-        ENSEMBLE_BLEND_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Blending.pkl", "predict_from": 805530972},
-        #ENSEMBLE_STACK_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Stacking.pkl", "predict_from": 872658553},
-        #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "predict_from": 872658553},
+        NEURAL_NETWORK_MODEL_LABEL: {"path": clfs_dir+"NNLogistic/Valchiavenna_Neural Network.pkl", "skip_predict": True},
+        CALIBRATED_ADABOOST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_AdaBoost Calibrated.pkl"},
+        #ENSEMBLE_BLEND_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Blending.pkl", "skip_predict": True},
+        #ENSEMBLE_STACK_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Stacking.pkl", "predict_from": 1611061944},
+        #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "predict_from": 1006913715},
     }
 
     column_types={'dtm': 'float32', 'east': 'float32', 'ndvi': 'float32', 'north': 'float32', 'faults': 'float32', 'rivers': 'float32', 'roads': 'float32', 'dusaf': 'float32', 'plan': 'float32', 'profile': 'float32', 'twi': 'float32'}
@@ -163,48 +165,33 @@ def check_factors():
 
 def plot_evaluation():
     test_info = [
+        {
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_northern.csv",
+            "result_path": ld_dir + "/3.results/testingpoints_northern/",
+        },
         #{
         #    "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points.csv",
         #    "result_path": ld_dir + "/3.results/testingpoints_in_whole_region/emsemble/",
         #},
-        #{
-        #    "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv",
-        #    "result_path": {"basic": ld_dir+"/3.results/testingpoints_without_3regions/3rd_onlyVC/", "ensemble": ld_dir+"/3.results/testingpoints_without_3regions/3rd_onlyVC/ensemble/"},
-        #},
         {
-            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_northern.csv",
-            "result_path": {"basic": ld_dir+"/3.results/testingpoints_northern/2nd_with/", "ensemble": ld_dir+"/3.results/testingpoints_northern/2nd_with/ensemble/"},
-        }
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv",
+            "result_path": ld_dir + "/3.results/testingpoints_without_3regions/",
+        },
     ]
-    vc_dir = base_dir + r"ValChiavenna/"
-    all_clfs = {
-        "basic": {
-            BAGGING_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Bagging.pkl", "color": 'tab:orange'},
-            RANDOMFOREST_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Forests of randomized trees.pkl", "color": 'tab:green'},
-            CALIBRATED_ADABOOST_MODEL_LABLE: {"path": vc_dir+"3.results/2nd_with/Valchiavenna_AdaBoost Calibrated.pkl", "color": 'tab:purple'},
-            GRADIENT_TREE_BOOSTING_MODEL_LABLE:  {"path": vc_dir+"3.results/2nd_with/Valchiavenna_Gradient Tree Boosting.pkl", "color": 'tab:brown'},
-            NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/NNLogistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},
-        },
-        "ensemble": {
-            ENSEMBLE_STACK_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Stacking.pkl", "color": 'tab:orange'},
-            ENSEMBLE_BLEND_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Blending.pkl", "color": 'tab:green'},
-            ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "color": 'tab:brown'},
-        },
-    }
+    all_clfs = {"Valchiavenna_"+key:info["clfs"] for key, info in vc_clfs.items()}
+    all_clfs["Val Tartano"] = vt_clfs
+    all_clfs["UpperValtellina"] = uv_clfs
 
     for info in test_info:
+        print(info)
         testset_path = info["testset_path"]
-        result_path = info["result_path"]["ensemble"]
-        clfs = all_clfs["ensemble"]
-        print(testset_path)
-        plot_LSM_evaluation(testset_path, clfs, result_path)
-        reports = {}
-        for model_lable in clfs:
-            reports[model_lable] = evaluation_with_testset(testset_path, clfs[model_lable]["path"], model_lable, save_to=result_path)
-        #print(reports)
-        import json
-        with open(os.path.join(result_path, "report.json"), "w") as f:
-            json.dump(reports, f)
+        for region, clfs in all_clfs.items():
+            save_info = [
+                ("basic", os.path.join(info["result_path"], f"{region}/")),
+                ("ensemble", os.path.join(info["result_path"], f"{region}/ensemble")),
+            ]
+
+            plot_evaluation_with_testset(testset_path, clfs, save_info)
 
 
 if __name__ == '__main__':
@@ -231,7 +218,7 @@ if __name__ == '__main__':
     #testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv"
     #preparation(ld_dir+"1.factors", M=1, N=5)
     #Lombardy(clfs, ld_dir, factor_dirs, testset_path)
-    #Lombardy_WithChunk()
+    Lombardy_WithChunk()
     #check_factors()
     """ Evaluation using the test dataset
     test_info = [
@@ -250,4 +237,4 @@ if __name__ == '__main__':
         for info in test_info:
             evaluation(info["testset_path"], model_path, model_label, info["save_to"])
     """
-    plot_evaluation()
+    #plot_evaluation()

@@ -1,10 +1,10 @@
 #################### MODELLING (with validation) ####################
 import numpy as np
 
+from config import *
 from evaluation import evaluation_report
 
 from sklearn.ensemble import BaggingClassifier
-BAGGING_MODEL_LABLE = "Bagging"
 '''
 estimator: The base estimator to fit on random subsets of the dataset.
                 If None, then the base estimator is a DecisionTreeClassifier.
@@ -25,7 +25,7 @@ def ensemble_bagging(X, Y, Xtest, Ytest, model_paras=DEFAULT_RANDOMFOREST_MODEL_
     return clf
 
 from sklearn.ensemble import RandomForestClassifier
-RANDOMFOREST_MODEL_LABLE = "Forests of randomized trees"
+
 '''
 n_estimators: The number of trees in the forest. (指定森林中树的颗数，越多越好，只是不要超过内存)
                 default: 100
@@ -49,7 +49,7 @@ def ensemble_randomforest(X, Y, Xtest, Ytest, model_paras=DEFAULT_RANDOMFOREST_M
     return clf
 
 from sklearn.ensemble import AdaBoostClassifier
-ADABOOST_MODEL_LABLE = "AdaBoost"
+
 '''
 estimator: object. The base estimator from which the boosted ensemble is built.
                     Support for sample weighting is required, as well as proper classes_ and n_classes_ attributes.
@@ -78,12 +78,12 @@ def ensemble_adaboost(X, Y, Xtest, Ytest,
     return clf
 
 from sklearn.calibration import CalibratedClassifierCV
-CALIBRATED_ADABOOST_MODEL_LABLE = "AdaBoost Calibrated"
+
 DEFAULT_CALIBRATED_ADABOOST_MODEL_PARAS = {'n_estimators': 300, 'learning_rate': 0.8}
 def ensemble_calibrated_adaboost(X, Y, Xtest, Ytest,
                       model_paras=DEFAULT_CALIBRATED_ADABOOST_MODEL_PARAS, save_to=None):
     # train
-    clf = CalibratedClassifierCV(AdaBoostClassifier(**model_paras)).fit(X, Y)
+    clf = CalibratedClassifierCV(AdaBoostClassifier(**model_paras), n_jobs=-1).fit(X, Y)
     # test
     Ytest_pred = clf.predict_proba(Xtest)
     ## test result evaluation
@@ -92,7 +92,7 @@ def ensemble_calibrated_adaboost(X, Y, Xtest, Ytest,
     return clf
 
 from sklearn.ensemble import GradientBoostingClassifier
-GRADIENT_TREE_BOOSTING_MODEL_LABLE = "Gradient Tree Boosting"
+
 DEFAULT_GRADIENTBOOSTING_MODEL_PARAS = {'n_estimators': 300, 'learning_rate': 0.8}
 def ensemble_gradienttreeboosting(X, Y, Xtest, Ytest,
                                   model_paras=DEFAULT_GRADIENTBOOSTING_MODEL_PARAS, save_to=None):
@@ -133,7 +133,6 @@ def gaussian_process(X, Y, Xtest, Ytest,
     return clf
 
 from sklearn.neural_network import MLPClassifier
-NEURAL_NETWORK_MODEL_LABEL = "Neural Network"
 DEFAULT_NEURAL_NETWORK_MODEL_PARAS = {
     "hidden_layer_sizes": (100,),
     "activation": 'relu',
@@ -169,7 +168,7 @@ def NN_wrapper(X, Y, Xtest, Ytest, save_to=None):
 # TOTEST: stacking model
 from sklearn.ensemble import StackingClassifier as Stacker
 from sklearn.linear_model import LogisticRegression
-ENSEMBLE_STACK_MODEL_LABEL = "Ensemble Stacking"
+
 # final_estimatorestimator: default=None. Aclassifier which will be used to combine the base estimators. The default classifier is a LogisticRegression.
 DEFAULT_ENSEMBLE_STACK_MODEL_PARAS = {
     "estimators": [
@@ -205,7 +204,7 @@ def ensemble_stack_wrapper_with_cvset(X, Y, Xtest, Ytest, save_to=None):
 # ref: https://machinelearningmastery.com/blending-ensemble-machine-learning-with-python/
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
-ENSEMBLE_BLEND_MODEL_LABEL = "Ensemble Blending"
+
 DEFAULT_ENSEMBLE_BLEND_MODEL_PARAS = {
     "estimators": [
         ("RandomForest", RandomForestClassifier(**DEFAULT_RANDOMFOREST_MODEL_PARAS)),
@@ -291,7 +290,6 @@ def ensemble_blend(X, Y, Xtest, Ytest,
     return clf
 
 # simple average model
-ENSEMBLE_SA_MODEL_LABEL = "Ensemble Simple Averaging"
 DEFAULT_ENSEMBLE_SA_MODEL_PARAS = {
     "estimators": [
         ("RandomForest", RandomForestClassifier(**DEFAULT_RANDOMFOREST_MODEL_PARAS)),
@@ -351,7 +349,6 @@ def ensemble_simple_average(X, Y, Xtest, Ytest,
 # ref: https://scikit-learn.org/stable/modules/ensemble.html#weighted-average-probabilities-soft-voting
 # ref: https://machinelearningmastery.com/weighted-average-ensemble-with-python/
 from sklearn.ensemble import VotingClassifier
-ENSEMBLE_SOFT_VOTING_MODEL_LABEL = "Ensemble Soft Voting"
 DEFAULT_ENSEMBLE_SOFT_VOTING_MODEL_PARAS = {
     "estimators": [
         ("RandomForest", RandomForestClassifier(**DEFAULT_RANDOMFOREST_MODEL_PARAS)),
@@ -359,6 +356,7 @@ DEFAULT_ENSEMBLE_SOFT_VOTING_MODEL_PARAS = {
         ("NeuralNetworksAndLR", MLPClassifier(**DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS)),
     ],
     "voting": "soft",
+    "n_jobs": -1,
 }
 def ensemble_soft_voting(X, Y, Xtest, Ytest,
             model_paras=DEFAULT_ENSEMBLE_SOFT_VOTING_MODEL_PARAS, save_to=None):
