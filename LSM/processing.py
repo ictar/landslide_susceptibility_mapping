@@ -56,25 +56,39 @@ def plot_LSM_prediction(target_pred, raster_info, mask, model_label, save_to=Non
 
     return outmap
     
-
 def mapping(target_xs, clf, model_label,raster_info, mask, save_to):
     #print(f"[Mapping] Model: {model_label}")
     target_y_pred = clf.predict_proba(target_xs)
     outmap = plot_LSM_prediction(target_y_pred, raster_info, mask, model_label, save_to)
     # save
-    with rasterio.open(
-        os.path.join(save_to, f'LSM_{model_label}.tif'),
-        'w',
-        driver='GTiff',
-        height=outmap['LSM'].shape[0],
-        width=outmap['LSM'].shape[1],
-        count=2,
-        dtype=outmap['LSM'].dtype,
-        crs=raster_info['crs'],
-        transform=raster_info['transform'],
-    ) as dst:
-        dst.write(outmap['LSM'], 1)
-        dst.write(outmap['NLZ'], 2)
+    try:
+        with rasterio.open(
+            os.path.join(save_to, f'LSM_{model_label}.tif'),
+            'w',
+            driver='GTiff',
+            height=outmap['LSM'].shape[0],
+            width=outmap['LSM'].shape[1],
+            count=2,
+            dtype=outmap['LSM'].dtype,
+            crs=raster_info['crs'],
+            transform=raster_info['transform'],
+        ) as dst:
+            dst.write(outmap['LSM'], 1)
+            dst.write(outmap['NLZ'], 2)
+    except Exception as e:
+        print(e, f'\nResave to current')
+        with rasterio.open(f'LSM_{model_label}.tif',
+            'w',
+            driver='GTiff',
+            height=outmap['LSM'].shape[0],
+            width=outmap['LSM'].shape[1],
+            count=2,
+            dtype=outmap['LSM'].dtype,
+            crs=raster_info['crs'],
+            transform=raster_info['transform'],
+        ) as dst:
+            dst.write(outmap['LSM'], 1)
+            dst.write(outmap['NLZ'], 2)
 
 def bigdata_mapping(model_label, clf_pred_dir, save_to, raster_info, mask, chunk_idxs):
     print(f"""[DIR]
@@ -352,16 +366,24 @@ def LSM_PredictMap_WithChunk(clfs, factor_dir, result_path, need_chunk=True, col
             clf = load_model(model_path)
             print(f"[DONE] Load model {model_label}. Features are {clf.feature_names_in_}")
             
+            chunk_target_paths = []
             for ifrom, ito in chunk_idxs:
                 if ifrom < predict_from:
                     print(f"Skip {ifrom} ~ {ito}, because predict from {predict_from}")
                     continue
 
                 print(f"\nFrom idx {ifrom} to idx {ito}")
-                chunk_target_path = os.path.join(chunk_save_to, f"target_{ifrom}_{ito}.csv")
+                #chunk_target_path = os.path.join(chunk_save_to, f"target_{ifrom}_{ito}.csv")
+                chunk_target_paths.append(os.path.join(chunk_save_to, f"target_{ifrom}_{ito}.csv"))
+                if len(chunk_target_paths) == 3:
+                    from joblib import Parallel, delayed
+                    Parallel(n_jobs=len(chunk_target_paths))(delayed(bigdata_predict)(clf, model_label, chunk_target_path, column_types, chunk_size=chunk_size, clf_pred_dir=clf_pred_dir,batch_size=pred_batch_size) for chunk_target_path in chunk_target_paths)
+                    #bigdata_predict(clf, model_label, chunk_target_path, column_types, chunk_size=chunk_size, clf_pred_dir=clf_pred_dir,batch_size=pred_batch_size)
+                    chunk_target_paths = []
+            if chunk_target_paths:
+                from joblib import Parallel, delayed
+                Parallel(n_jobs=len(chunk_target_paths))(delayed(bigdata_predict)(clf, model_label, chunk_target_path, column_types, chunk_size=chunk_size, clf_pred_dir=clf_pred_dir,batch_size=pred_batch_size) for chunk_target_path in chunk_target_paths)
 
-                bigdata_predict(clf, model_label, chunk_target_path, column_types, chunk_size=chunk_size, clf_pred_dir=clf_pred_dir,
-                batch_size=pred_batch_size)
         else:
             print("Skip Predict!!")
         print(f"[{model_label}] Predict Time cost: {time()-start}")
@@ -369,7 +391,8 @@ def LSM_PredictMap_WithChunk(clfs, factor_dir, result_path, need_chunk=True, col
         gc.collect()
         
         print("### Mapping")
-        bigdata_mapping(model_label, clf_pred_dir, clf_pred_dir, raster_info, mask, chunk_idxs)
+        if not model_info.get("skip_mapping", False):
+            bigdata_mapping(model_label, clf_pred_dir, clf_pred_dir, raster_info, mask, chunk_idxs)
 
         gc.collect()
 

@@ -1,7 +1,8 @@
 import numpy as np
 
 #base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/"
-base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/"
+#base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/"
+base_dir = r"/Users/elexu/Library/CloudStorage/OneDrive-PolitecnicodiMilano/thesis/practice/"
 
 rFactors = ['dtm', 'east', 'ndvi', 'north', 'faults',
         'rivers','roads','dusaf',
@@ -70,9 +71,9 @@ vt_clfs = {
             NEURAL_NETWORK_MODEL_LABEL: {"path": vt_dir+"3.results/NNLogistic/Val Tartano_Neural Network.pkl", "color": 'tab:pink'},
         },
         "ensemble": {
-            ENSEMBLE_STACK_MODEL_LABEL: {"path": vt_dir+"3.results/ensemble/Val Tartano_Ensemble Stacking.pkl", "color": 'tab:orange'},
-            ENSEMBLE_BLEND_MODEL_LABEL: {"path": vt_dir+"3.results/ensemble/Val Tartano_Ensemble Blending.pkl", "color": 'tab:green'},
-            ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vt_dir+"3.results/ensemble/Val Tartano_Ensemble Soft Voting.pkl", "color": 'tab:brown'},
+            ENSEMBLE_STACK_MODEL_LABEL: {"path": vt_dir+"3.results/ensemble/Val Tartano_Ensemble Stacking.pkl", "color": 'tab:orange', "linestyle": 'dashed'},
+            ENSEMBLE_BLEND_MODEL_LABEL: {"path": vt_dir+"3.results/ensemble/Val Tartano_Ensemble Blending.pkl", "color": 'tab:green', "linestyle": 'dashed'},
+            ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vt_dir+"3.results/ensemble/Val Tartano_Ensemble Soft Voting.pkl", "color": 'tab:brown', "linestyle": 'dashed'},
         },
     }
 
@@ -87,9 +88,9 @@ uv_clfs = {
             NEURAL_NETWORK_MODEL_LABEL: {"path": uv_dir+"3.results.tune/NNLogistic/Upper Valtellina_Neural Network.pkl", "color": 'tab:pink'},
         },
         "ensemble": {
-            ENSEMBLE_STACK_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Stacking.pkl", "color": 'tab:orange'},
-            ENSEMBLE_BLEND_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Blending.pkl", "color": 'tab:green'},
-            ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Soft Voting.pkl", "color": 'tab:brown'},
+            ENSEMBLE_STACK_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Stacking.pkl", "color": 'tab:orange', "linestyle": 'dashed'},
+            ENSEMBLE_BLEND_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Blending.pkl", "color": 'tab:green', "linestyle": 'dashed'},
+            ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": uv_dir+"3.results/ensemble/Upper Valtellina_Ensemble Soft Voting.pkl", "color": 'tab:brown', "linestyle": 'dashed'},
         }
     }
 
@@ -108,9 +109,9 @@ vc_clfs = {
                     NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/NNLogistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},
                 },
                 "ensemble": {
-                    ENSEMBLE_STACK_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/ensemble/Valchiavenna_Ensemble Stacking.pkl", "color": 'tab:orange'},
-                    ENSEMBLE_BLEND_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/ensemble/Valchiavenna_Ensemble Blending.pkl", "color": 'tab:green'},
-                    ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "color": 'tab:brown'},
+                    ENSEMBLE_STACK_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/ensemble/Valchiavenna_Ensemble Stacking.pkl", "color": 'tab:orange', "linestyle": 'dashed'},
+                    ENSEMBLE_BLEND_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/ensemble/Valchiavenna_Ensemble Blending.pkl", "color": 'tab:green', "linestyle": 'dashed'},
+                    ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "color": 'tab:brown', "linestyle": 'dashed'},
                 },
             }
         },
@@ -127,9 +128,9 @@ vc_clfs = {
                     NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/NNLogistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},
                 },
                 "ensemble": {
-                    ENSEMBLE_STACK_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Stacking.pkl", "color": 'tab:orange'},
-                    ENSEMBLE_BLEND_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Blending.pkl", "color": 'tab:green'},
-                    ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "color": 'tab:brown'},
+                    ENSEMBLE_STACK_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Stacking.pkl", "color": 'tab:orange', "linestyle": 'dashed'},
+                    ENSEMBLE_BLEND_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Blending.pkl", "color": 'tab:green', "linestyle": 'dashed'},
+                    ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "color": 'tab:brown', "linestyle": 'dashed'},
                 },
             }
         },
@@ -146,9 +147,9 @@ vc_clfs = {
                     NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/NNLogistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},
                 },
                 "ensemble": {
-                    ENSEMBLE_STACK_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/ensemble/Valchiavenna_Ensemble Stacking.pkl", "color": 'tab:orange'},
-                    ENSEMBLE_BLEND_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/ensemble/Valchiavenna_Ensemble Blending.pkl", "color": 'tab:green'},
-                    ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "color": 'tab:brown'},
+                    ENSEMBLE_STACK_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/ensemble/Valchiavenna_Ensemble Stacking.pkl", "color": 'tab:orange', "linestyle": 'dashed'},
+                    ENSEMBLE_BLEND_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/ensemble/Valchiavenna_Ensemble Blending.pkl", "color": 'tab:green', "linestyle": 'dashed'},
+                    ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "color": 'tab:brown', "linestyle": 'dashed'},
                 },
             }
         },

@@ -2,9 +2,11 @@ import json
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning) 
 import pandas as pd
+pd.set_option('display.max_columns', None)
 from matplotlib import pyplot as plt
 from config import base_dir
 
+from collections import defaultdict
 import joblib
 def load_model(model_path):
     return joblib.load(model_path)
@@ -34,40 +36,33 @@ def print_evaluation_result_base_inregions(eval_js_paths, groups):
     print("\tOA\tPrecision\tRecall\tF-measure"*len(model_labels))
 
     cases = reports.keys()
-    OAs, Precisions, Recalls, Fmeasures = pd.DataFrame(columns=["Case"].extend(model_labels)), pd.DataFrame(columns=["Case"].extend(model_labels)), pd.DataFrame(columns=["Case"].extend(model_labels)), pd.DataFrame(columns=["Case"].extend(model_labels))
+    OAs, Precisions, Recalls, Fmeasures = defaultdict(dict), defaultdict(dict), defaultdict(dict), defaultdict(dict)
     for key in cases:
+        OAs[key], Precisions[key], Recalls[key], Fmeasures[key] = {}, {}, {}, {}
         tlst = []
         for model_label in model_labels:
             info = reports[key][model_label]['basic']
             tlst.append(f'{info["accuracy"]*100:.2f}%\t{info["precision"][-1]*100:.2f}%\t{info["recall"][-1]*100:.2f}%\t{info["fscore"][-1]*100:.2f}%')
+            OAs[key][model_label] = reports[key][model_label]['basic']["accuracy"]
+            Precisions[key][model_label] = reports[key][model_label]['basic']["precision"][-1]
+            Recalls[key][model_label] = reports[key][model_label]['basic']["recall"][-1]
+            Fmeasures[key][model_label] = reports[key][model_label]['basic']["fscore"][-1]
         tmp = "\t".join(tlst)
         print(f"""{key}\t{tmp}""")
-        # construct dfs
-        tmp = {model_label: reports[key][model_label]['basic']["accuracy"] for model_label in model_labels}
-        tmp['Case'] = key
-        OAs = OAs.append(tmp, ignore_index = True)
-        tmp = {model_label: reports[key][model_label]['basic']["precision"][-1] for model_label in model_labels}
-        tmp['Case'] = key
-        Precisions = Precisions.append(tmp, ignore_index = True)
-        tmp = {model_label: reports[key][model_label]['basic']["recall"][-1] for model_label in model_labels}
-        tmp['Case'] = key
-        Recalls = Recalls.append(tmp, ignore_index = True)
-        tmp = {model_label: reports[key][model_label]['basic']["fscore"][-1] for model_label in model_labels}
-        tmp['Case'] = key
-        Fmeasures = Fmeasures.append(tmp, ignore_index = True)
+    # construct dfs
+    OAs = pd.DataFrame(OAs).transpose()
+    Precisions = pd.DataFrame(Precisions).transpose()
+    Recalls = pd.DataFrame(Recalls).transpose()
+    Fmeasures = pd.DataFrame(Fmeasures).transpose()
 
-    OAs = OAs.set_index("Case")
-    Precisions = Precisions.set_index("Case")
-    Recalls = Recalls.set_index("Case")
-    Fmeasures = Fmeasures.set_index("Case")
     print("Overall Accuracy")
-    print(OAs)
+    print(OAs.to_csv(sep='\t'))
     print("Precision")
-    print(Precisions)
+    print(Precisions.to_csv(sep='\t'))
     print("Recall")
-    print(Recalls)
+    print(Recalls.to_csv(sep='\t'))
     print("Fmeasure")
-    print(Fmeasures)
+    print(Fmeasures.to_csv(sep='\t'))
     # plot
     for group in groups:
         OA = OAs.filter(items=group, axis=0)
@@ -93,6 +88,8 @@ def print_evaluation_result_base_inregions(eval_js_paths, groups):
         #fig.tight_layout()
         plt.show()
 
+    return OAs, Precisions, Recalls, Fmeasures
+
 def print_evaluation_result_OA_Threshold(eval_js_path):
     print(eval_js_path)
     results = {}
@@ -106,7 +103,7 @@ def print_evaluation_result_OA_Threshold(eval_js_path):
         
         print(f'{model_label}\t{basic_info["accuracy"]*100:.2f}%\t{optroc_info["best_threshold"]:.2f}\t{optroc_info["accuracy"]*100:.2f}%\t{optprc_info["best_threshold"]:.2f}\t{optprc_info["accuracy"]*100:.2f}%')
 
-def print_OA_inregions(eval_js_paths, OA_TYPE="basic"):
+def print_OA_inregions(eval_js_paths):
     reports = {}
     model_labels = None
     for key, p in eval_js_paths.items():
@@ -115,11 +112,64 @@ def print_OA_inregions(eval_js_paths, OA_TYPE="basic"):
             if model_labels is None:
                 model_labels = list(reports[key].keys())
 
-    tmp = '\t'.join(reports.keys())
-    print(f"Methods\t{tmp}")
-    for model_label in model_labels:
-        tmp = '\t'.join([f'{reports[key][model_label][OA_TYPE]["accuracy"]*100:.2f}%' for key in reports])
-        print(f"{model_label}\t{tmp}")
+    tmp = ('\t'*5).join(model_labels)
+    print(f"Cases\t{tmp}")
+    print("\tBase OA\tOptimal ROC Threshold\tOptimal ROC OA\tOptimal PRC Threshold\tOptimal PRC OA"*len(model_labels))
+
+    cases = reports.keys()
+    OAs, optROCThrs, optROCOAs, optPRCThrs, optPRCOAs = defaultdict(dict), defaultdict(dict), defaultdict(dict), defaultdict(dict), defaultdict(dict)
+    for key in cases:
+        OAs[key], optROCThrs[key], optROCOAs[key], optPRCThrs[key], optPRCOAs[key] = {}, {}, {}, {}, {}
+        tlist = []
+        for model_label in model_labels:
+            info = reports[key][model_label]
+            tlist.append(f'{info["basic"]["accuracy"]*100:.2f}\t{info["optimalROC"]["best_threshold"]:.2f}\t{info["optimalROC"]["accuracy"]*100:.2f}\t{info["optimalPRC"]["best_threshold"]:.2f}\t{info["optimalPRC"]["accuracy"]*100:.2f}')
+            
+            OAs[key][model_label] = info["basic"]["accuracy"]
+            optROCThrs[key][model_label] = info["optimalROC"]["best_threshold"]
+            optROCOAs[key][model_label] = info["optimalROC"]["accuracy"]
+            optPRCThrs[key][model_label] = info["optimalPRC"]["best_threshold"]
+            optPRCOAs[key][model_label] = info["optimalPRC"]["accuracy"]
+
+        tmp = '\t'.join(tlist)
+        print(f"{key}\t{tmp}")
+
+    # another print schema
+    tmp = ('\t'*5).join(model_labels)
+    print(f"\nCases\t{tmp}")
+    print("\tBase OA\tOptimal ROC OA \t(Threshold)\tOptimal PRC OA \t(Threshold)"*len(model_labels))
+    for key in cases:
+        tlist = []
+        for model_label in model_labels:
+            info = reports[key][model_label]
+            tlist.append(f'{info["basic"]["accuracy"]*100:.2f}%\t{info["optimalROC"]["accuracy"]*100:.2f}%\t{info["optimalROC"]["best_threshold"]:.4f}\t{info["optimalPRC"]["accuracy"]*100:.2f}%\t{info["optimalPRC"]["best_threshold"]:.4f}')
+
+        tmp = '\t'.join(tlist)
+        print(f"{key}\t{tmp}")
+
+    # construct dfs
+    OAs = pd.DataFrame(OAs).transpose()
+    optROCThrs = pd.DataFrame(optROCThrs).transpose()
+    optROCOAs = pd.DataFrame(optROCOAs).transpose()
+    optPRCThrs = pd.DataFrame(optPRCThrs).transpose()
+    optPRCOAs = pd.DataFrame(optPRCOAs).transpose()
+
+    print("Basic Accuracy")
+    print(OAs.to_csv(sep='\t'))
+    print("Optimal ROC Threshold")
+    print(optROCThrs.to_csv(sep='\t'))
+    print("Optimal ROC Accuracy")
+    print(optROCOAs.to_csv(sep='\t'))
+    print("Optimal PRC Threshold")
+    print(optPRCThrs.to_csv(sep='\t'))
+    print("Optimal PRC Accuracy")
+    print(optPRCOAs.to_csv(sep='\t'))
+    # plot
+
+    # save
+
+    return OAs, optROCThrs, optROCOAs, optPRCThrs, optPRCOAs
+
 
 def _modelname2filename(mn):
     mn = mn.replace(":", " ").replace("/", " ")
@@ -138,13 +188,13 @@ def main():
             ## testingpoints_northern
             "LC1+VT": base_dir + r"/Lombardy/3.results/testingpoints_northern/Val Tartano/report.json",
             "LC1+UV": base_dir + r"/Lombardy/3.results/testingpoints_northern/UpperValtellina/report.json",
-            "LC1+VCC1": base_dir + r"/Lombardy/3.results/testingpoints_northern/Valchiavenna_1_without/report.json",
+            "LC1+VT+UV": base_dir + r"/Lombardy/3.results/testingpoints_northern/Valchiavenna_1_without/report.json",
             "LC1+VCC2": base_dir + r"/Lombardy/3.results/testingpoints_northern/Valchiavenna_2_with/report.json",
             "LC1+VCC3": base_dir + r"/Lombardy/3.results/testingpoints_northern/Valchiavenna_3_onlywith/report.json",
             ## testingpoints_without_3regions
             "LC2+VT": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Val Tartano/report.json",
             "LC2+UV": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/UpperValtellina/report.json",
-            "LC2+VCC1": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Valchiavenna_1_without/report.json",
+            "LC2+VT+UV": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Valchiavenna_1_without/report.json",
             "LC2+VCC2": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Valchiavenna_2_with/report.json",
             "LC2+VCC3": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Valchiavenna_3_onlywith/report.json",
         },
@@ -159,30 +209,35 @@ def main():
             ## testingpoints_northern
             "LC1+VT": base_dir + r"/Lombardy/3.results/testingpoints_northern/Val Tartano/ensemble/report.json",
             "LC1+UV": base_dir + r"/Lombardy/3.results/testingpoints_northern/UpperValtellina/ensemble/report.json",
-            "LC1+VCC1": base_dir + r"/Lombardy/3.results/testingpoints_northern/Valchiavenna_1_without/ensemble/report.json",
+            "LC1+VT+UV": base_dir + r"/Lombardy/3.results/testingpoints_northern/Valchiavenna_1_without/ensemble/report.json",
             "LC1+VCC2": base_dir + r"/Lombardy/3.results/testingpoints_northern/Valchiavenna_2_with/ensemble/report.json",
             "LC1+VCC3": base_dir + r"/Lombardy/3.results/testingpoints_northern/Valchiavenna_3_onlywith/ensemble/report.json",
             ## testingpoints_without_3regions
             "LC2+VT": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Val Tartano/ensemble/report.json",
             "LC2+UV": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/UpperValtellina/ensemble/report.json",
-            "LC2+VCC1": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Valchiavenna_1_without/ensemble/report.json",
+            "LC2+VT+UV": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Valchiavenna_1_without/ensemble/report.json",
             "LC2+VCC2": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Valchiavenna_2_with/ensemble/report.json",
             "LC2+VCC3": base_dir + r"/Lombardy/3.results/testingpoints_without_3regions/Valchiavenna_3_onlywith/ensemble/report.json",
         },
     }
     groups = [
-        ["VT", "UV", "VCC2", "VCC3"],
-        ["VCC1", "LC1+VT", "LC1+UV", "LC1+VCC1", "LC1+VCC2", "LC1+VCC3", "LC2+VT", "LC2+UV", "LC2+VCC1", "LC2+VCC2", "LC2+VCC3"],
+        #["VT", "UV", "VCC2", "VCC3"],
+        ["VT", "UV", "VCC2", "VCC3", "VCC1", "LC1+VT", "LC1+UV", "LC1+VT+UV", "LC1+VCC2", "LC1+VCC3", "LC2+VT", "LC2+UV", "LC2+VT+UV", "LC2+VCC2", "LC2+VCC3"],
     ]
+    infos = {}
     for key in eval_js_paths:
         print("\n\n", key)
-        #print_OA_inregions(eval_js_paths[key], "optimalPRC")
-        print_evaluation_result_base_inregions(eval_js_paths[key], groups)
+        infos[key] = {}
+        OAs, optROCThrs, optROCOAs, optPRCThrs, optPRCOAs = print_OA_inregions(eval_js_paths[key])
+        infos[key]["OA"] = {'OAs': OAs, 'optROCThrs': optROCThrs, 'optROCOAs': optROCOAs, 'optPRCThrs': optPRCThrs, 'optPRCOAs': optPRCOAs}
+        OAs, Precisions, Recalls, Fmeasures = print_evaluation_result_base_inregions(eval_js_paths[key], groups)
+        infos[key]['base'] = {'OAs': OAs, 'Precisions': Precisions, 'Recalls': Recalls, 'Fmeasures': Fmeasures}
         """for p in eval_js_paths[key]:
             print('*'*20)
             #print_evaluation_result(p)
             print_evaluation_result_OA_Threshold(p)
             print('*'*20)"""
+    return infos
         
 if __name__ == '__main__':
     main()

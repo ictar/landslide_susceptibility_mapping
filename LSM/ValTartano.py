@@ -9,7 +9,7 @@ def ValTartano():
     factor_dir = vt_dir+"1.factors"
     trainset_path = vt_dir+"/2.samples/ValTartano_Training_Points.csv"
     testset_path = vt_dir+"/2.samples/ValTartano_Testing_Points.csv"
-    result_path = vt_dir+"3.results/"
+    result_path = vt_dir+"3.results/NNlogistic/tuning"
     
     def ensemble_SA_wrapper(X, Y, Xtest, Ytest, save_to=None):
         model_paras = DEFAULT_ENSEMBLE_SA_MODEL_PARAS
@@ -21,9 +21,9 @@ def ValTartano():
         return ensemble_simple_average(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
         
     algorithms = {
-        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost, 
+        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost, 
         # ADABOOST_MODEL_LABLE: ensemble_adaboost,
-        #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
+        NEURAL_NETWORK_MODEL_LABEL: NN_GridSearch,
         #ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack_wrapper_with_cvset,#ensemble_stack,
         #ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
         #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,

@@ -72,6 +72,8 @@ False Positive Rate = {fpr[ix]}""")
         "fscore": fscore.tolist(), "FPR": 1.*FPR,
         "aucroc": 1.*metrics.roc_auc_score(y_true, y_predRnewT),
         "best_threshold": 1.*best_thresh,
+        "best_threshold_fpr": fpr[ix],
+        "best_threshold_tpr": tpr[ix],
     }
     print(f"""
 Classification report
@@ -122,7 +124,7 @@ def optimalPRCthreshold(y_true, y_pred, model_label, save_to=None):
     #fscore = (2 * precision * recall) / (precision + recall)
     # locate the index of the largest f score
     ix = np.argmax(fscore)
-    best_thresh = thresholds[ix]
+    best_thresh, best_threshold_recall, best_threshold_precision = thresholds[ix], recall[ix], precision[ix]
     print(f'Best Threshold={best_thresh}, F-Score={fscore[ix]}' )
 
     # plot the roc curve for the model
@@ -165,6 +167,8 @@ def optimalPRCthreshold(y_true, y_pred, model_label, save_to=None):
         "fscore": fscore.tolist(), "FPR": 1.*FPR,
         "aucroc": 1.*metrics.roc_auc_score(y_true, y_predRnewT),
         "best_threshold": 1.*best_thresh,
+        "best_threshold_recall": best_threshold_recall, 
+        "best_threshold_precision": best_threshold_precision,
     }
     print(f"""
 Classification report: {metrics.classification_report(y_true, y_predRnewT)}
@@ -308,6 +312,7 @@ def evaluation_with_testset(testset_path, model_path, model_label, save_to):
     return evaluation_report(test_y, Ytest_pred, model_label, save_to=save_to)
 
 import os
+import rasterio
 def plot_dataset_histogram(infos, save_to, labels=rFactors):
     N = len(infos)
     for name, info in infos.items():
@@ -341,9 +346,38 @@ def plot_dataset_histogram(infos, save_to, labels=rFactors):
             plt.savefig(os.path.join(save_to, label))
         else: plt.show()
 
+def plot_factors_histogram(title, fpath, save_to, labels=rFactors):
+    N = len(labels)
+
+    colors = plt.cm.get_cmap("Dark2")
+
+    for label in labels:
+        with rasterio.open(f"{fpath}/{label}.tif") as ds:
+            dataset = ds.read(1).reshape((-1,1))
+            plt.figure()
+            _, _, patches = plt.hist(
+                    dataset,
+                    bins=10,
+                    label=label,
+                    rwidth=0.8
+                )
+            # change to different colors
+            for j in range(len(patches)):
+                patches[j].set_facecolor(colors(j))
+            plt.title(title)
+            plt.xlabel(label)
+            plt.ylabel("Frequency")
+
+            plt.tight_layout()
+            if save_to:
+                if not os.path.exists(save_to):
+                    os.makedirs(save_to)
+                plt.savefig(os.path.join(save_to, label))
+            else: plt.show()
+
 from matplotlib.gridspec import GridSpec
 from sklearn.calibration import CalibrationDisplay
-def plot_LSM_evaluation(testset_path, clfs, save_to=None):
+def plot_LSM_evaluation(testset_path, clfs, save_to=None, skip_models=[ADABOOST_MODEL_LABLE,]):
     ## testing samples
     _, testingPoints = get_train_test(
         None,
@@ -354,6 +388,7 @@ def plot_LSM_evaluation(testset_path, clfs, save_to=None):
     test_xs, y_true = get_X_Y(testingPoints)
 
     for model_label, info in clfs.items():
+        if model_label in skip_models: continue
         clf = load_model(info["path"])
         test_xs = test_xs[clf.feature_names_in_]
         info["y_pred"] = clf.predict_proba(test_xs)
@@ -364,12 +399,15 @@ def plot_LSM_evaluation(testset_path, clfs, save_to=None):
     plt.figure()
     plt.plot([0,1], [0,1], linestyle='--', label='No Skill')
     for model_label, info in clfs.items():
+        if model_label in skip_models: continue
         y_pred = info["y_pred"]
         fpr, tpr, _ = metrics.roc_curve(y_true, y_pred[:,1])
 
         # plot the roc curve for the model
         auc = metrics.roc_auc_score(y_true,  [round(num) for num in y_pred[:,1]])
-        plt.plot(fpr, tpr, color=info["color"],label=f"{model_label} (AUC = {auc:.2f})")
+        if 'linestyle' in info:
+             plt.plot(fpr, tpr, color=info["color"],linestyle=info['linestyle'], label=f"{model_label} (AUC = {auc:.2f})")
+        else: plt.plot(fpr, tpr, color=info["color"],label=f"{model_label} (AUC = {auc:.2f})")
 
     # axis labels
     plt.xlabel('False Positive Rate')
@@ -385,10 +423,13 @@ def plot_LSM_evaluation(testset_path, clfs, save_to=None):
     plt.figure()
     plt.plot([0,1], [1,0], linestyle='--', label='No Skill')
     for model_label, info in clfs.items():
+        if model_label in skip_models: continue
         y_pred = info["y_pred"]
         precision, recall, _ = metrics.precision_recall_curve(y_true, y_pred[:,1])
         auc = metrics.auc(recall, precision)
-        plt.plot(recall, precision, color=info["color"], label=f"{model_label} (AUC = {auc:.2f})")
+        if 'linestyle' in info:
+            plt.plot(recall, precision, color=info["color"],linestyle=info['linestyle'], label=f"{model_label} (AUC = {auc:.2f})")
+        else: plt.plot(recall, precision, color=info["color"], label=f"{model_label} (AUC = {auc:.2f})")
     #plt.grid(True,'major',linewidth=0.3)
     plt.xlabel('Recall')
     plt.ylabel('Precision')
@@ -454,23 +495,23 @@ def plot_evaluation_with_testset(testset_path, clfs_info, save_info):
         with open(os.path.join(result_path, "report.json"), "w") as f:
             json.dump(reports, f)
 
-if __name__ == '__main__':
+def evaluation_main():
     # Val Tartano
     testset_path = vt_dir+"/2.samples/ValTartano_Testing_Points.csv"
     print("Handle ", testset_path)
     save_info = [('basic', vt_dir+"3.results/"), ("ensemble", vt_dir+"3.results/ensemble/")]
-    plot_evaluation_with_testset(testset_path, vt_clfs, save_info)
+    #plot_evaluation_with_testset(testset_path, vt_clfs, save_info)
     # Upper Valtellina
     testset_path = uv_dir+"2.samples/UpperValtellina_LSM_testing_points.csv"
     print("Handle ", testset_path)
     save_info = [('basic', uv_dir+"3.results/"), ("ensemble", uv_dir+"3.results/ensemble/")]
-    plot_evaluation_with_testset(testset_path, uv_clfs, save_info)
+    #plot_evaluation_with_testset(testset_path, uv_clfs, save_info)
     # Valchiavenna
     for key, info in vc_clfs.items():
         print(f"Handling {key}")
         testset_path = info["testset_path"]
         save_info = [(label, info['result_path'][label]) for label in info['result_path']]
-        plot_evaluation_with_testset(testset_path, info['clfs'], save_info)
+        #plot_evaluation_with_testset(testset_path, info['clfs'], save_info)
     # Lombardy
     test_info = [
         {
@@ -496,3 +537,57 @@ if __name__ == '__main__':
             ]
 
             plot_evaluation_with_testset(testset_path, clfs, save_info)
+
+def evaluation_allmodels_main():
+    # Val Tartano
+    testset_path = vt_dir+"/2.samples/ValTartano_Testing_Points.csv"
+    print("Handle ", testset_path)
+    save_info = vt_dir+"3.results/allmodels/"
+    clfs = vt_clfs['basic']
+    clfs.update(vt_clfs['ensemble'])
+    plot_LSM_evaluation(testset_path, clfs, save_info)
+    # Upper Valtellina
+    testset_path = uv_dir+"2.samples/UpperValtellina_LSM_testing_points.csv"
+    print("Handle ", testset_path)
+    save_info = uv_dir+"3.results/allmodels/"
+    clfs = uv_clfs['basic']
+    clfs.update(uv_clfs['ensemble'])
+    plot_LSM_evaluation(testset_path, clfs, save_info)
+    # Valchiavenna
+    for key, info in vc_clfs.items():
+        print(f"Handling {key}")
+        testset_path = info["testset_path"]
+        save_info = info['result_path']+'/allmodels/'
+        clfs = info['clfs']['basic']
+        clfs.update(info['clfs']['ensemble'])
+        plot_LSM_evaluation(testset_path, clfs, save_info)
+    # Lombardy
+    test_info = [
+        {
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_northern.csv",
+            "result_path": ld_dir + "/3.results/testingpoints_northern/",
+        },
+        {
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv",
+            "result_path": ld_dir + "/3.results/testingpoints_without_3regions/",
+        },
+    ]
+    all_clfs = {"Valchiavenna_"+key:info["clfs"] for key, info in vc_clfs.items()}
+    all_clfs["Val Tartano"] = vt_clfs
+    all_clfs["UpperValtellina"] = uv_clfs
+
+    for info in test_info:
+        print(info)
+        testset_path = info["testset_path"]
+        for region, clfs in all_clfs.items():
+            save_info = os.path.join(info["result_path"], f"{region}/allmodels/")
+
+            tmp_clfs = clfs['basic']
+            tmp_clfs.update(clfs['ensemble'])
+            plot_LSM_evaluation(testset_path, tmp_clfs, save_info)
+
+
+if __name__ == '__main__':
+    #plot_factors_histogram("Number of Points - Raster (ValChiavenna)", vc_dir+"1.factors", save_to=os.path.join(vc_dir+"1.factors", "hist"))
+    #plot_factors_histogram("Number of Points - Raster (Lombardy)", ld_dir+"1.factors", save_to=os.path.join(ld_dir+"1.factors", "hist"))
+    evaluation_allmodels_main()

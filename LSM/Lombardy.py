@@ -117,16 +117,16 @@ def Lombardy(clfs, ld_dir, factor_dirs, testset_path):
 def Lombardy_WithChunk():
     ld_dir = base_dir + r"Lombardy/"
     factor_dir = ld_dir+"1.factors/"
-    result_path = ld_dir+"3.results/"
+    result_path = ld_dir+"3.results/Valchiavenna_2_with/"
 
-    clfs_dir = base_dir + r"ValChiavenna/3.results/2nd_with/"
+    clfs_dir = base_dir + r"ValChiavenna/3.results/3rd_onlyVC/"
     clfs = {
         #BAGGING_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Bagging.pkl", "skip": True},
         #RANDOMFOREST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Forests of randomized trees.pkl", "skip": True, "skip_predict": True},
         #GRADIENT_TREE_BOOSTING_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl", "skip": True},
         #ADABOOST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_AdaBoost.pkl", "skip_predict": True},
-        NEURAL_NETWORK_MODEL_LABEL: {"path": clfs_dir+"NNLogistic/Valchiavenna_Neural Network.pkl", "skip_predict": True},
-        CALIBRATED_ADABOOST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_AdaBoost Calibrated.pkl"},
+        #NEURAL_NETWORK_MODEL_LABEL: {"path": clfs_dir+"NNLogistic/Valchiavenna_Neural Network.pkl", "skip_predict": True},
+        CALIBRATED_ADABOOST_MODEL_LABLE: {"path": vc_clfs['2_with']['clfs']["basic"][CALIBRATED_ADABOOST_MODEL_LABLE]["path"], "skip_predict": True},
         #ENSEMBLE_BLEND_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Blending.pkl", "skip_predict": True},
         #ENSEMBLE_STACK_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Stacking.pkl", "predict_from": 1611061944},
         #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "predict_from": 1006913715},
@@ -193,6 +193,24 @@ def plot_evaluation():
 
             plot_evaluation_with_testset(testset_path, clfs, save_info)
 
+import pandas as pd
+def evaluation_on_basins():
+    base_path = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/3.results/Valchiavenna_2_with/Neural Network"
+    testset_paths = {
+        "Val Tartano": os.path.join(base_path, "Val Tartano/VT_testing_points_true_pred.csv"),
+        "Upper Valtellina": os.path.join(base_path, "Upper Valtellina/UV_testing_points_true_pred.csv"),
+        "Val Chiavenna": os.path.join(base_path, "Val Chiavenna/VC_testing_points_true_pred.csv"),
+    }
+    save_to = ""
+    for region, data_path in testset_paths.items():
+        df = pd.read_csv(data_path)
+        print(f"[{region}]\nSize of dataset: ", df.shape)
+        df['no_hazard_pred'] = 1-df.loc[:, "hazard_pre"]
+        y_true, y_pred = df["hazard"].values.reshape((-1,1)), df.loc[:, ['no_hazard_pred', "hazard_pre"]].to_numpy()
+        print(f"Shape of true: {y_true.shape}, shape of Pred: {y_pred.shape}\n{y_pred}")
+        tmp_save_to = os.path.join(save_to, region)
+        evaluation_report(y_true, y_pred, "Neural Network + VCC2 in Lombardy", save_to=tmp_save_to)
+
 
 if __name__ == '__main__':
 
@@ -218,23 +236,38 @@ if __name__ == '__main__':
     #testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv"
     #preparation(ld_dir+"1.factors", M=1, N=5)
     #Lombardy(clfs, ld_dir, factor_dirs, testset_path)
-    Lombardy_WithChunk()
+    #Lombardy_WithChunk()
     #check_factors()
-    """ Evaluation using the test dataset
+    """ Evaluation using the test dataset"""
     test_info = [
         {
-            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points.csv",
-            "save_to": ld_dir + "/3.results/testingpoints_in_whole_region/ensemble/"
+            "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_northern.csv",
+            "result_path": ld_dir + "/3.results/testingpoints_northern/",
         },
         {
             "testset_path": ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv",
-            "save_to": ld_dir+"/3.results/testingpoints_without_3regions/ensemble"
-        }
+            "result_path": ld_dir + "/3.results/testingpoints_without_3regions/",
+        },
     ]
-    for model_label, model_path in clfs.items():
-        #save_to = ld_dir + "/3.results/testingpoints_in_whole_region/NNlogistic"
-        save_to = ld_dir+"/3.results/testingpoints_without_3regions/NNlogistic"
-        for info in test_info:
-            evaluation(info["testset_path"], model_path, model_label, info["save_to"])
-    """
+
+    NN_clfs = {
+        "Valchiavenna_1_without": {"basic": {NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/1st_without/NNLogistic/0_0001_logistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},}},
+        "Valchiavenna_2_with": {"basic": {NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/2nd_with/NNLogistic/0_0001_logistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},}},
+        "Valchiavenna_3_onlywith": {"basic": {NEURAL_NETWORK_MODEL_LABEL: {"path": vc_dir+"3.results/3rd_onlyVC/NNLogistic/0_0001_logistic/Valchiavenna_Neural Network.pkl", "color": 'tab:pink'},}},
+    }
+    NN_clfs["Val Tartano"] = {"basic": {NEURAL_NETWORK_MODEL_LABEL: {"path": vt_dir+"3.results/NNLogistic/0_0001_logistic/Val Tartano_Neural Network.pkl", "color": 'tab:pink'},}}
+    NN_clfs["UpperValtellina"] = {"basic": {NEURAL_NETWORK_MODEL_LABEL: {"path": uv_dir+"3.results/NN/0_0001_logistic/Upper Valtellina_Neural Network.pkl", "color": 'tab:pink'},}}
+
+    for info in test_info:
+        #print(info)
+        testset_path = info["testset_path"]
+        for region, clfs in NN_clfs.items():
+            save_info = [
+                ("basic", os.path.join(info["result_path"], f"{region}/NN/0_0001_logistic")),
+            ]
+
+            #plot_evaluation_with_testset(testset_path, clfs, save_info)
+    
     #plot_evaluation()
+
+    evaluation_on_basins()

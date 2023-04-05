@@ -149,7 +149,10 @@ def neural_network(X, Y, Xtest, Ytest,
     # test
     Ytest_pred = clf.predict_proba(Xtest)
     ## test result evaluation
-    evaluation_report(Ytest, Ytest_pred, "Model Neural Network", save_to)
+    report = evaluation_report(Ytest, Ytest_pred, "Model Neural Network", save_to)
+    import os, json
+    with open(os.path.join(save_to, f"NNreport.json"), "w") as f:
+        json.dump(report, f)
     return clf
 
 DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS = DEFAULT_NEURAL_NETWORK_MODEL_PARAS
@@ -157,13 +160,106 @@ DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS["activation"] = 'logistic'
 DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS['alpha'] = 0.01
 # TOFIX:  ConvergenceWarning: Stochastic Optimizer: Maximum iterations (200) reached and the optimization hasn't converged yet.
 DEFAULT_NEURAL_NETWORK_MODEL_WITH_LR_PARAS["max_iter"] = 500
-def NN_wrapper(X, Y, Xtest, Ytest, save_to=None):
-        model_paras = DEFAULT_NEURAL_NETWORK_MODEL_PARAS
-        #model_paras['hidden_layer_sizes'] = (100,50)
-        model_paras["activation"] = 'logistic'
-        model_paras['alpha'] = 0.01
-        #model_paras["max_iter"] = 500
-        return neural_network(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
+def NN_wrapper_0_01_logistic(X, Y, Xtest, Ytest, save_to=None):
+    model_paras = DEFAULT_NEURAL_NETWORK_MODEL_PARAS
+    #model_paras['hidden_layer_sizes'] = (100,50)
+    model_paras["activation"] = 'logistic'
+    model_paras['alpha'] = 0.01
+    model_paras["max_iter"] = 200
+    return neural_network(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
+
+def NN_wrapper_0_0001_logistic(X, Y, Xtest, Ytest, save_to=None):
+    model_paras = DEFAULT_NEURAL_NETWORK_MODEL_PARAS
+    #model_paras['hidden_layer_sizes'] = (100,50)
+    model_paras["activation"] = 'logistic'
+    model_paras['alpha'] = 0.0001
+    model_paras["max_iter"] = 200
+    return neural_network(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
+
+def NN_wrapper_0_01_relu(X, Y, Xtest, Ytest, save_to=None):
+    model_paras = DEFAULT_NEURAL_NETWORK_MODEL_PARAS
+    #model_paras['hidden_layer_sizes'] = (100,50)
+    model_paras["activation"] = 'relu'
+    model_paras['alpha'] = 0.01
+    model_paras["max_iter"] = 200
+    return neural_network(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
+
+def NN_GridSearch_bestforvt(X, Y, Xtest, Ytest, save_to=None):
+    model_paras = {'activation': 'relu',
+        'alpha': 0.001,
+        'early_stopping': True,
+        'hidden_layer_sizes': (128, 128, 128, 128, 128, 128, 128),
+        'learning_rate': 'adaptive',
+        'learning_rate_init': 0.001,
+        'max_iter': 500,
+        'random_state': 9,
+        'solver': 'adam',
+        'validation_fraction': 0.2
+    }
+    return neural_network(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
+
+## tuning for NN
+from sklearn.model_selection import GridSearchCV 
+def NN_GridSearch(X, Y, Xtest, Ytest, save_to=None):
+    parameters = {
+        'hidden_layer_sizes': [
+            (512,), (512, 512, 512, ), #(512, 512, 512, 512, 512, 512, 512, ),
+            (256,), (256, 256, 256, ), #(256, 256, 256, 256, 256, 256, 256, ),
+            (128,), (128, 128, 128, ), (128, 128, 128, 128, 128, 128, 128, ),
+            (512, 256, 128,),
+            ], 
+        'activation': ['logistic', 'relu'],
+        'solver': ['adam'],
+        'alpha': [0.001],#10.0 ** -np.arange(2, 5), 
+        'learning_rate': ['adaptive',], 
+        'learning_rate_init': 10.0 ** -np.arange(1, 5),#10.0 ** -np.arange(-1, 5),
+        'random_state':[0,1,2,3,4,5,6,7,8,9],
+        'max_iter': [500,],
+        'early_stopping': [True,],
+        'validation_fraction': [0.2,],
+    }
+    clf = GridSearchCV(MLPClassifier(), parameters, n_jobs=-1, verbose=4).fit(X, Y)
+
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+    ## test result evaluation
+    report = evaluation_report(Ytest, Ytest_pred, "Model Neural Network Tuning", save_to)
+    import os, json
+    with open(os.path.join(save_to, f"NNTuningreport.json"), "w") as f:
+        json.dump(report, f)
+    return clf
+
+from sklearn.experimental import enable_halving_search_cv
+from sklearn.model_selection import HalvingGridSearchCV
+def NN_HalfGridSearch(X, Y, Xtest, Ytest, save_to=None):
+    parameters = {
+        'hidden_layer_sizes': [
+            (512,), (512, 512, 512, ), (512, 512, 512, 512, 512, 512, 512, ),
+            (256,), (256, 256, 256, ), (256, 256, 256, 256, 256, 256, 256, ),
+            (128,), (128, 128, 128, ), (128, 128, 128, 128, 128, 128, 128, ),
+            (512, 256, 128,),
+            ], 
+        'activation': ['logistic', 'relu'],
+        'solver': ['adam'],
+        'alpha': 10.0 ** -np.arange(2, 5), 
+        'learning_rate': ['adaptive',], 
+        'learning_rate_init': 10.0 ** -np.arange(1, 5),#10.0 ** -np.arange(-1, 5),
+        'random_state':[0,1,2,3,4,5,6,7,8,9],
+        'max_iter': [500,],
+        'early_stopping': [True,],
+        'validation_fraction': [0.2,],
+    }
+    clf = HalvingGridSearchCV(MLPClassifier(), parameters, n_jobs=-1, verbose=4).fit(X, Y)
+
+    # test
+    Ytest_pred = clf.predict_proba(Xtest)
+    ## test result evaluation
+    report = evaluation_report(Ytest, Ytest_pred, "Model Neural Network Tuning", save_to)
+    import os, json
+    with open(os.path.join(save_to, f"NNTuningreport.json"), "w") as f:
+        json.dump(report, f)
+    return clf
+
 
 # TOTEST: stacking model
 from sklearn.ensemble import StackingClassifier as Stacker

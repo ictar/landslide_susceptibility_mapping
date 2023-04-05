@@ -9,7 +9,7 @@ def UpperValtellina():
     factor_dir = uv_dir+"1.factors"
     trainset_path = uv_dir+"/2.samples/UpperValtellina_LSM_training_points.csv"
     testset_path = uv_dir+"/2.samples/UpperValtellina_LSM_testing_points.csv"
-    result_path = uv_dir+"3.results/"
+    result_path = uv_dir+"3.results/NN/GridSearch_bestforvt/"
     preprocess = None
 
     def RF_wrapper(X, Y, Xtest, Ytest, save_to=None):
@@ -23,8 +23,8 @@ def UpperValtellina():
         return ensemble_adaboost(X, Y, Xtest, Ytest, model_paras=model_paras, save_to=save_to)
 
     algorithms = {
-        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
-        #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
+        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
+        NEURAL_NETWORK_MODEL_LABEL: NN_GridSearch_bestforvt,
         #ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack,
         #ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
         #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,

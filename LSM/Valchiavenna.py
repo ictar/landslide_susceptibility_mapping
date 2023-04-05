@@ -12,7 +12,7 @@ def Valchiavenna_v1_without():
     factor_dir = vc_dir+"1.factors"
     trainset_path = vc_dir+"/2.samples/1st_without/UpperValtellina_ValTartano_training_points.csv"
     testset_path = vc_dir+"/2.samples/1st_without/Valchiavenna_LSM_testing_points.csv"
-    result_path = vc_dir+"3.results/1st_without/"
+    result_path = vc_dir+"3.results/1st_without/NNLogistic/GridSearch_bestforvt"
 
     def ensemble_SA_wrapper(X, Y, Xtest, Ytest, save_to=None):
         model_paras = DEFAULT_ENSEMBLE_SA_MODEL_PARAS
@@ -25,8 +25,8 @@ def Valchiavenna_v1_without():
     
     #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
     algorithms={
-        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
-        #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
+        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
+        NEURAL_NETWORK_MODEL_LABEL: NN_GridSearch_bestforvt,
         #ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack_wrapper_with_cvset, #ensemble_stack,
         #ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
         #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,
@@ -40,12 +40,12 @@ def Valchiavenna_v2_with():
     factor_dir = vc_dir+"1.factors"
     trainset_path = vc_dir+"/2.samples/2nd_with/UpperValtellina_ValTartano_Valchiavenna_LSM_training_points.csv"
     testset_path = vc_dir+"/2.samples/2nd_with/Valchiavenna_LSM_testing_points.csv"
-    result_path = vc_dir+"3.results/2nd_with/"
+    result_path = vc_dir+"3.results/2nd_with/NNLogistic/GridSearch_bestforvt/"
 
     #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
     algorithms={
-        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
-        #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
+        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
+        NEURAL_NETWORK_MODEL_LABEL: NN_GridSearch_bestforvt,
         #ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack,
         #ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
         #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,
@@ -58,12 +58,13 @@ def Valchiavenna_v3_onlyVC():
     factor_dir = vc_dir+"1.factors"
     trainset_path = vc_dir+"/2.samples/3rd_onlyVC/ValChiavenna_LSM_training_points.csv"
     testset_path = vc_dir+"/2.samples/3rd_onlyVC/Valchiavenna_LSM_testing_points.csv"
-    result_path = vc_dir+"3.results/3rd_onlyVC/"
+    result_path = vc_dir+"3.results/3rd_onlyVC/NNLogistic/tuning_halfsearch/"
 
     #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
+    
     algorithms={
-        CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
-        #NEURAL_NETWORK_MODEL_LABEL: NN_wrapper,
+        #CALIBRATED_ADABOOST_MODEL_LABLE: ensemble_calibrated_adaboost,
+        NEURAL_NETWORK_MODEL_LABEL: NN_HalfGridSearch,
         #ENSEMBLE_STACK_MODEL_LABEL: ensemble_stack,
         #ENSEMBLE_BLEND_MODEL_LABEL: ensemble_blend,
         #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: ensemble_soft_voting,
@@ -120,10 +121,14 @@ def plot_evaluation():
         save_info = [(label, info['result_path'][label]) for label in info['result_path']]
         plot_evaluation_with_testset(testset_path, info['clfs'], save_info)
 
+def helper(fn):
+    fn()
 if __name__ == '__main__':
-    Valchiavenna_v1_without()
-    Valchiavenna_v2_with()
+    from joblib import Parallel, delayed
+    #Parallel(n_jobs=3)(delayed(helper)(fn) for fn in [Valchiavenna_v1_without, Valchiavenna_v2_with, Valchiavenna_v3_onlyVC])
     Valchiavenna_v3_onlyVC()
+    #Valchiavenna_v1_without()
+    #Valchiavenna_v2_with()
     #check_factors()
     #Valchiavenna_v1_without_result_evaluation()
     #Valchiavenna_v2_with_result_evaluation()
