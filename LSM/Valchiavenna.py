@@ -72,6 +72,66 @@ def Valchiavenna_v3_onlyVC():
         
     LSM('Valchiavenna', factor_dir, trainset_path, testset_path, result_path, preprocess=None, algorithms=algorithms)
 
+def Valchiavenna_v4_avgprecip():
+    '''
+    In this case, average precipitation is included
+    '''
+    vc_dir = base_dir + r"ValChiavenna/"
+    factor_dir = vc_dir+"1.factors"
+    trainset_path = vc_dir+"/2.samples/4th_avgprecip/UpperValtellina_ValTartano_Valchiavenna_LSM_training_points.csv"
+    testset_path = vc_dir+"/2.samples/4th_avgprecip/Valchiavenna_LSM_testing_points.csv"
+    result_path = vc_dir+"3.results/4th_avgprecip/NN/"
+
+    #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
+    algorithms={
+        NEURAL_NETWORK_MODEL_LABEL: NN_wrapper_0_01_logistic,
+    }
+
+    Precipitation_Name = 'precipitation_avg'
+    rFactors.append(Precipitation_Name)
+    continuous_factors.append(Precipitation_Name)
+    clfs = LSM('Valchiavenna', factor_dir, trainset_path, testset_path, result_path, preprocess=None, algorithms=algorithms)
+    rFactors.remove(Precipitation_Name)
+    continuous_factors.remove(Precipitation_Name)
+
+def Valchiavenna_v5_90pprecip():
+    '''
+    In this case, 90 percentile precipitation is included
+    '''
+    vc_dir = base_dir + r"ValChiavenna/"
+    factor_dir = vc_dir+"1.factors"
+    trainset_path = vc_dir+"/2.samples/5th_90thprecip/UpperValtellina_ValTartano_Valchiavenna_LSM_training_points.csv"
+    testset_path = vc_dir+"/2.samples/5th_90thprecip/Valchiavenna_LSM_testing_points.csv"
+    result_path = vc_dir+"3.results/5th_90thprecip/NN/"
+
+    #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
+    algorithms={
+        NEURAL_NETWORK_MODEL_LABEL: NN_wrapper_0_01_logistic,
+    }
+
+    Precipitation_Name = 'precipitation_90th'
+    rFactors.append(Precipitation_Name)
+    continuous_factors.append(Precipitation_Name)
+    clfs = LSM('Valchiavenna', factor_dir, trainset_path, testset_path, result_path, preprocess=None, algorithms=algorithms)
+    rFactors.remove(Precipitation_Name)
+    continuous_factors.remove(Precipitation_Name)
+
+def Valchiavenna_v6_precip():
+    '''
+    In this case, average + 90 percentile precipitation is included
+    '''
+    vc_dir = base_dir + r"ValChiavenna/"
+    factor_dir = vc_dir+"1.factors"
+    trainset_path = vc_dir+"/2.samples/6th_precips/UpperValtellina_ValTartano_Valchiavenna_LSM_training_points.csv"
+    testset_path = vc_dir+"/2.samples/6th_precips/Valchiavenna_LSM_testing_points.csv"
+    result_path = vc_dir+"3.results/6th_precips/NN/"
+
+    #algorithms={SVM_MODEL_LABLE:svm_svc, NEURAL_NETWORK_MODEL_LABEL: neural_network}
+    algorithms={
+        NEURAL_NETWORK_MODEL_LABEL: NN_wrapper_0_01_logistic,
+    }
+
+    clfs = LSM('Valchiavenna', factor_dir, trainset_path, testset_path, result_path, preprocess=None, algorithms=algorithms)
 
 def check_factors():
     vc_dir = base_dir + r"ValChiavenna/"
@@ -126,7 +186,10 @@ def helper(fn):
 if __name__ == '__main__':
     from joblib import Parallel, delayed
     #Parallel(n_jobs=3)(delayed(helper)(fn) for fn in [Valchiavenna_v1_without, Valchiavenna_v2_with, Valchiavenna_v3_onlyVC])
-    Valchiavenna_v3_onlyVC()
+    #Valchiavenna_v3_onlyVC()
+    #Valchiavenna_v4_avgprecip()
+    #Valchiavenna_v5_90pprecip()
+    Valchiavenna_v6_precip()
     #Valchiavenna_v1_without()
     #Valchiavenna_v2_with()
     #check_factors()

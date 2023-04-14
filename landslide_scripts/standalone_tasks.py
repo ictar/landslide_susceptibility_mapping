@@ -1,10 +1,14 @@
 import sys
-
+import os
 # TOFIX ModuleNotFoundError: No module named 'qgis'
-# export PYTHONHOME=/Applications/QGIS-LTR.app/Contents/MacOS/
-# /Applications/QGIS-LTR.app/Contents/MacOS/bin/python3 standalone_tasks.py
+# 1. export PYTHONPATH=/Applications/QGIS-LTR.app/Contents/Resources/python
+# 2. /Applications/QGIS-LTR.app/Contents/MacOS/bin/python3 standalone_tasks.py
+qgis_bin_path = r'/Applications/QGIS-LTR.app/Contents/MacOS/bin/'
+if qgis_bin_path not in sys.path:
+    sys.path.append(qgis_bin_path)
 
-from qgis.core import QgsApplication
+from qgis.core import *
+from PyQt5.QtWidgets import QApplication
 
 def main():
     #sampling_test(2*200*1000)
@@ -12,7 +16,8 @@ def main():
     #base_data_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/"
     #overlay_analysis(base_data_dir+"NLS_fixed.gpkg", base_data_dir+"LS_union.gpkg", [isnlz_field, ], [hazard_field,])
     #check_env_raster_properties()
-    sampling_test(2*200*1000)
+    #sampling_test(2*200*1000)
+    add_landslide_records_to_LSM()
 
 
 if __name__ == '__main__':
@@ -23,12 +28,13 @@ if __name__ == '__main__':
     # Create a reference to the QgsApplication.  Setting the
     # second argument to False disables the GUI.
     qgs = QgsApplication([], False)
+    os.environ['PROJ_LIB'] = "/Applications/QGIS-LTR.app/Contents/Resources/proj"
 
     # Load providers
     qgs.initQgis()
 
     # Add the path to Processing framework
-    sys.path.append(r"/Applications/QGIS-LTR.app/Contents/PlugIns") # QGIS ver. 3.22
+    sys.path.append(r'/Applications/QGIS-LTR.app/Contents/Resources/python/plugins') # QGIS ver. 3.22
     # Import and initialize Processing framework
     from qgis.analysis import QgsNativeAlgorithms
     #import processing

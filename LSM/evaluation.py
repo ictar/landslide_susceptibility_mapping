@@ -300,6 +300,7 @@ def evaluation_with_testset(testset_path, model_path, model_label, save_to):
     result path: {save_to}""")
 
     clf = load_model(model_path)
+    print(f'classifer feature: {clf.feature_names_in_}')
     ## testing samples
     _, testingPoints = get_train_test(
         None,
@@ -388,7 +389,6 @@ def plot_LSM_evaluation(testset_path, clfs, save_to=None, skip_models=[ADABOOST_
     test_xs, y_true = get_X_Y(testingPoints)
 
     for model_label, info in clfs.items():
-        if model_label in skip_models: continue
         clf = load_model(info["path"])
         test_xs = test_xs[clf.feature_names_in_]
         info["y_pred"] = clf.predict_proba(test_xs)
@@ -441,7 +441,7 @@ def plot_LSM_evaluation(testset_path, clfs, save_to=None, skip_models=[ADABOOST_
 
     # plot calibration curves
     fig = plt.figure(figsize=(10, 10))
-    gs = GridSpec(4, 3)
+    gs = GridSpec(5, 3)
 
     ax_calibration_curve = fig.add_subplot(gs[:2, :3])
     calibration_displays = {}
@@ -459,7 +459,7 @@ def plot_LSM_evaluation(testset_path, clfs, save_to=None, skip_models=[ADABOOST_
     ax_calibration_curve.set_title("Calibration plots")
 
     # Add histogram
-    grid_positions = [(2, 0), (2, 1), (2, 2), (3, 0), (3, 1), (3, 2)]
+    grid_positions = [(2, 0), (2, 1), (2, 2), (3, 0), (3, 1), (3, 2), (4, 0), (4, 1), (4, 2)]
     i = 0
     for model_label, info in clfs.items():
         row, col = grid_positions[i]
@@ -474,6 +474,57 @@ def plot_LSM_evaluation(testset_path, clfs, save_to=None, skip_models=[ADABOOST_
         )
         ax.set(title=model_label, xlabel="Mean predicted probability", ylabel="Count")
         i += 1
+
+    plt.tight_layout()
+    if save_to:
+        plt.savefig(os.path.join(save_to, "Calibration_plots"))
+    else: plt.show()
+
+def plot_single_model_calibration(infos, save_to=None, model_label='Neural Network'):
+    # plot calibration curves
+    fig = plt.figure(figsize=(10, 10))
+    gs = GridSpec(7, 3)
+    colors = plt.cm.get_cmap("tab20")
+
+    ax_calibration_curve = fig.add_subplot(gs[:3, :3])
+    calibration_displays = {}
+    for i, (case_label, info) in enumerate(infos.items()):
+        clf = load_model(info["clf"]['path'])
+        ## testing samples
+        print(case_label, info['testset_path'])
+        _, testingPoints = get_train_test(
+            None,
+            info['testset_path']
+        )
+        test_xs, y_true = get_X_Y(testingPoints)
+
+        test_xs = test_xs[clf.feature_names_in_]
+        calibration_displays[case_label] = CalibrationDisplay.from_estimator(clf,
+            test_xs,
+            y_true,
+            n_bins=10,
+            name=case_label,
+            ax=ax_calibration_curve,
+            color=colors(i)
+        )
+
+    ax_calibration_curve.grid()
+    ax_calibration_curve.set_title(f"Calibration plots using {model_label}")
+
+    # Add histogram
+    grid_positions = [(3, 0), (3, 1), (3, 2), (4, 0), (4, 1), (4, 2), (5, 0), (5, 1), (5, 2), (6, 0), (6, 1), (6, 2), ]
+    for i, (case_label, info) in enumerate(infos.items()):
+        row, col = grid_positions[i]
+        ax = fig.add_subplot(gs[row, col])
+
+        ax.hist(
+            calibration_displays[case_label].y_prob,
+            range=(0, 1),
+            bins=10,
+            label=case_label,
+            color=colors(i),
+        )
+        ax.set(title=case_label, xlabel="Mean predicted probability", ylabel="Count")
 
     plt.tight_layout()
     if save_to:
@@ -557,7 +608,7 @@ def evaluation_allmodels_main():
     for key, info in vc_clfs.items():
         print(f"Handling {key}")
         testset_path = info["testset_path"]
-        save_info = info['result_path']+'/allmodels/'
+        save_info = info['result_path']['basic']+'/allmodels/'
         clfs = info['clfs']['basic']
         clfs.update(info['clfs']['ensemble'])
         plot_LSM_evaluation(testset_path, clfs, save_info)
@@ -587,7 +638,42 @@ def evaluation_allmodels_main():
             plot_LSM_evaluation(testset_path, tmp_clfs, save_info)
 
 
+def evaluation_on_trainingset():
+    '''
+    Evaluation the model on training dataset
+    '''
+    # Val Tartano
+    pointset_path = vt_dir+"/2.samples/ValTartano_Training_Points.csv"
+    print("Handle ", pointset_path)
+    save_info = [('basic', vt_dir+"3.results/training/"), ("ensemble", vt_dir+"3.results/training/ensemble/")]
+    plot_evaluation_with_testset(pointset_path, vt_clfs, save_info)
+    # Upper Valtellina
+    pointset_path = uv_dir+"2.samples/UpperValtellina_LSM_training_points.csv"
+    print("Handle ", pointset_path)
+    save_info = [('basic', uv_dir+"3.results/training/"), ("ensemble", uv_dir+"3.results/training/ensemble/")]
+    plot_evaluation_with_testset(pointset_path, uv_clfs, save_info)
+    # Valchiavenna
+    pointset_path = vc_dir+"/2.samples/3rd_onlyVC/ValChiavenna_LSM_training_points.csv"
+    print("Handle ", pointset_path)
+    save_info = [('basic', vc_dir+"3.results/training/"), ("ensemble", vc_dir+"3.results/training/ensemble/")]
+    plot_evaluation_with_testset(pointset_path, vc_clfs['3_onlywith']['clfs'], save_info)
+
 if __name__ == '__main__':
     #plot_factors_histogram("Number of Points - Raster (ValChiavenna)", vc_dir+"1.factors", save_to=os.path.join(vc_dir+"1.factors", "hist"))
     #plot_factors_histogram("Number of Points - Raster (Lombardy)", ld_dir+"1.factors", save_to=os.path.join(ld_dir+"1.factors", "hist"))
-    evaluation_allmodels_main()
+    #evaluation_allmodels_main()
+    evaluation_on_trainingset()
+    '''
+    plot_single_model_calibration(infos={
+        'LC1+VT': {'clf':vt_clfs['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_north},
+        'LC1+UV': {'clf':uv_clfs['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_north},
+        'LC1+VT+UV': {'clf':vc_clfs['1_without']['clfs']['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_north},
+        'LC1+VCC2': {'clf':vc_clfs['2_with']['clfs']['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_north},
+        'LC1+VCC3': {'clf':vc_clfs['3_onlywith']['clfs']['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_north},
+        'LC2+VT': {'clf': vt_clfs['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_whole},
+        'LC2+UV': {'clf':uv_clfs['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_whole},
+        'LC2+VT+UV': {'clf':vc_clfs['1_without']['clfs']['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_whole},
+        'LC2+VCC2': {'clf':vc_clfs['2_with']['clfs']['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_whole},
+        'LC2+VCC3': {'clf':vc_clfs['3_onlywith']['clfs']['basic'][NEURAL_NETWORK_MODEL_LABEL], 'testset_path': ld_testset_path_whole},
+    }, save_to=ld_dir+'/3.results/')
+    '''

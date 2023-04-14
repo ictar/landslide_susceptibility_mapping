@@ -1,9 +1,9 @@
 # INPUT
 #base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/"
-#base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Lombardy/"
-base_dir = r"C:\\xuqiongjie\\"
+base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Lombardy/"
+#base_dir = r"C:\\xuqiongjie\\"
 #base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/"
-data_dir = base_dir + r"Exclude_3basins\\"
+data_dir = base_dir + r"data/Exclude_3basins/"
 #data_dir = base_dir + r"1.factors/"
 processing_dir = base_dir + r"processing/"
 dtm = data_dir + "dtm.tif"

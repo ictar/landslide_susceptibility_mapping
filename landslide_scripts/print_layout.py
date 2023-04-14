@@ -194,19 +194,22 @@ def print_LSM_layout(config):
     for layer in prj.layerTreeRoot().children(): # layer type: QgsLayerTreeLayer
         layer.setItemVisibilityCheckedParentRecursive(False)
 
-    lsm_name = config['lsm_name']
-    # find layer
-    layer = prj.mapLayersByName(lsm_name)[0]
-    # set visibility
-    prj.layerTreeRoot().findLayer(layer.id()).setItemVisibilityCheckedParentRecursive(True)
-    # load style
-    # ref: https://gis.stackexchange.com/questions/386890/symbolizing-raster-layer-with-python-qgis
-    layer.loadNamedStyle(config["style"])
-    iface.layerTreeView().refreshLayerSymbology(layer.id())
-    layer.triggerRepaint()
+    for lsm_name, info in config['lsms'].items():
+        # find layer
+        layer = prj.mapLayersByName(lsm_name)[0]
+        # set visibility
+        prj.layerTreeRoot().findLayer(layer.id()).setItemVisibilityCheckedParentRecursive(True)
+        # load style
+        # ref: https://gis.stackexchange.com/questions/386890/symbolizing-raster-layer-with-python-qgis
+        layer.loadNamedStyle(config["style"])
+        iface.layerTreeView().refreshLayerSymbology(layer.id())
+        layer.triggerRepaint()
 
-    # print
-    print_layout(lsm_name, "", config["legendname"], config["layout"], os.path.join(config['save_to'], f"{lsm_name}.png"))
+        # print
+        print_layout(lsm_name, "", info["legendname"], config["layout"], os.path.join(config['save_to'], f"{lsm_name}.png"))
+
+        # set invisibility
+        prj.layerTreeRoot().findLayer(layer.id()).setItemVisibilityCheckedParentRecursive(False)
 
 
 def Upper_Valtellina():
@@ -238,8 +241,40 @@ def Upper_Valtellina():
     }
 
     print_factor_layout(config)
-    
+   
 #Upper_Valtellina()
+
+def Upper_Valtellina_LSM(style_paths):
+    aoi_name = 'Upper Valtellina'
+    save_to = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Upper Valtellina/3.results/"
+    config = {
+        "save_to": save_to,
+        "lsms": {
+            'LSM_Bagging': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_AdaBoost': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_AdaBoost Calibrated': {"legendname": f"{aoi_name}\nSusceptibility Map"}, 
+            'LSM_Fortests of randomized trees': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Gradient Tree Boosting': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Neural Network': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Soft Voting': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Blending': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Stacking': {"legendname": f"{aoi_name}Susceptibility Map"},       
+        },
+        "layout": {
+           "map": {"position": (10, 10), "size": (200, 170), "grid_interval": (0.1, 0.05)}, # VT
+            "arrow": {"position": (20, 25), "size": [22,27]},
+            "legend": {"position": (230, 10), "size": ()},
+            "scale": {"position": (230,164), "size": ()},
+        },
+    }
+
+    for style_name, style_path in style_paths.items():
+        config['save_to'] = os.path.join(save_to, style_name)
+        config['style'] = style_path
+        print_LSM_layout(config)
+
+#Upper_Valtellina_LSM({"LSM_4class": r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/symbology/LSM_4classes.qml", "LSM_5class": r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/symbology/LSM_5classes.qml",})
+#Upper_Valtellina_LSM({"LSM_5class": r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/symbology/LSM_5classes.qml",})
 
 def Val_Tartano():
     style_path = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Val Tartano/symbology/"
@@ -273,6 +308,37 @@ def Val_Tartano():
     
 #Val_Tartano()
 
+def Val_Tartano_LSM(style_paths):
+    aoi_name = 'Val Tartano'
+    save_to = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Val Tartano/3.results/"
+    config = {
+        "save_to": save_to,
+        "lsms": {
+            'LSM_Bagging': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_AdaBoost': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_AdaBoost Calibrated': {"legendname": f"{aoi_name}\nSusceptibility Map"}, 
+            'LSM_Fortests of randomized trees': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Gradient Tree Boosting': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Neural Network': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Soft Voting': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Blending': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Stacking': {"legendname": f"{aoi_name}Susceptibility Map"},       
+        },
+        "layout": {
+           "map": {"position": (10, 10), "size": (200, 170), "grid_interval": (0.1, 0.05)}, # VT
+            "arrow": {"position": (20, 25), "size": [22,27]},
+            "legend": {"position": (230, 10), "size": ()},
+            "scale": {"position": (230,164), "size": ()},
+        },
+    }
+
+    for style_name, style_path in style_paths.items():
+        config['save_to'] = os.path.join(save_to, style_name)
+        config['style'] = style_path
+        print_LSM_layout(config)
+
+#Val_Tartano_LSM({"LSM_5class": r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/symbology/LSM_5classes.qml",})
+
 def Val_Chiavenna():
     style_path = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/ValChiavenna/symbology/"
     aoi_name = "Val Chiavenna"
@@ -305,6 +371,40 @@ def Val_Chiavenna():
     
 #Val_Chiavenna()
 
+def Val_Chiavenna_LSM(style_paths):
+    aoi_name = 'Val Chiavenna'
+    #save_to = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/ValChiavenna/3.results/1st_without/"
+    #save_to = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/ValChiavenna/3.results/2nd_with/"
+    save_to = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/ValChiavenna/3.results/3rd_onlyVC/"
+    config = {
+        "save_to": save_to,
+        "lsms": {
+            'LSM_Bagging': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_AdaBoost': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_AdaBoost Calibrated': {"legendname": f"{aoi_name}\nSusceptibility Map"}, 
+            'LSM_Forests of randomized trees': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Gradient Tree Boosting': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Neural Network': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Soft Voting': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Blending': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Ensemble Stacking': {"legendname": f"{aoi_name}Susceptibility Map"},       
+        },
+        "layout": {
+           "map": {"position": (10, 10), "size": (200, 170), "grid_interval": (0.1, 0.05)},
+            "arrow": {"position": (20, 25), "size": [22,27]},
+            "legend": {"position": (230, 10), "size": ()},
+            "scale": {"position": (230,164), "size": ()},
+        },
+    }
+
+    for style_name, style_path in style_paths.items():
+        config['save_to'] = os.path.join(save_to, style_name)
+        config['style'] = style_path
+        print_LSM_layout(config)
+
+#Val_Chiavenna_LSM({"LSM_5class": r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/symbology/LSM_5classes.qml",})
+
+
 def Lombardy():
     style_path = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/symbology/"
     aoi_name = "Lombardy"
@@ -335,4 +435,34 @@ def Lombardy():
 
     print_factor_layout(config)
     
-Lombardy()
+#Lombardy()
+
+def Lombardy_LSM(style_paths, save_to):
+    aoi_name = 'Lombardy'
+    config = {
+        "save_to": save_to,
+        "lsms": {
+            #'LSM_Bagging': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            #'LSM_AdaBoost': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            #'LSM_AdaBoost Calibrated': {"legendname": f"{aoi_name}\nSusceptibility Map"}, 
+            #'LSM_Forests of randomized trees': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            #'LSM_Gradient Tree Boosting': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            'LSM_Neural Network': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            #'LSM_Ensemble Soft Voting': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            #'LSM_Ensemble Blending': {"legendname": f"{aoi_name}\nSusceptibility Map"},
+            #'LSM_Ensemble Stacking': {"legendname": f"{aoi_name}Susceptibility Map"},       
+        },
+        "layout": {
+           "map": {"position": (10, 10), "size": (200, 170), "grid_interval": (1, 0.5)},
+            "arrow": {"position": (20, 25), "size": [22,27]},
+            "legend": {"position": (230, 10), "size": ()},
+            "scale": {"position": (230,164), "size": ()},
+        },
+    }
+
+    for style_name, style_path in style_paths.items():
+        config['save_to'] = os.path.join(save_to, style_name)
+        config['style'] = style_path
+        print_LSM_layout(config)
+
+Lombardy_LSM({"LSM_5class": r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/symbology/LSM_5classes.qml"}, r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/3.results/Valchiavenna_6_precips/")

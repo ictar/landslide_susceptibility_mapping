@@ -6,8 +6,8 @@ from qgis.core import (
     )
 from qgis.PyQt.QtCore import QVariant
 
-#config_path = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/Materials/master_thesis/landslide_scripts"
-config_path = r"C:\\xuqiongjie\\landslide_scripts"
+config_path = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/Materials/master_thesis/landslide_scripts"
+#config_path = r"C:\\xuqiongjie\\landslide_scripts"
 import sys
 if config_path not in sys.path: sys.path.append(config_path)
 from config import *
@@ -203,20 +203,20 @@ def _point_sampling(layer, exp, point_num, min_distance, output):
     }, feedback=MyFeedback())
     # 2. selection: Processing > Vector Creation > Random Points in layer bounds
     ## ref: https://gis.stackexchange.com/questions/311336/running-pyqgis-algorithm-on-selected-features-in-layer
-    '''processing.runAndLoadResults('qgis:randompointsinlayerbounds', {
+    processing.runAndLoadResults('qgis:randompointsinlayerbounds', {
         'INPUT': QgsProcessingFeatureSourceDefinition(layer.id(), True), # selected feature only
         'POINTS_NUMBER': point_num,
         'MIN_DISTANCE': min_distance, # it should be the DTM layer resolution in meters
         'OUTPUT': output,
-    }, feedback=MyFeedback())'''
-    processing.runAndLoadResults("grass7:v.random", {
+    }, feedback=MyFeedback())
+    '''processing.runAndLoadResults("grass7:v.random", {
         'npoints':point_num,'restrict':QgsProcessingFeatureSourceDefinition(layer.id(), selectedFeaturesOnly=True, featureLimit=-1, geometryCheck=QgsFeatureRequest.GeometryAbortOnInvalid),
         'where':'','zmin':0,'zmax':0,'seed':None,'column':'z','column_type':0,'-z':False,'-a':False,
         'output': output,
         'GRASS_REGION_PARAMETER':None,'GRASS_SNAP_TOLERANCE_PARAMETER':-1,'GRASS_MIN_AREA_PARAMETER': min_distance, #Minimum size of area to be imported (square meters). Smaller areas and islands are ignored
         'GRASS_OUTPUT_TYPE_PARAMETER':1, # 1: point
         'GRASS_VECTOR_DSCO':'','GRASS_VECTOR_LCO':'','GRASS_VECTOR_EXPORT_NOCAT':False
-    }, feedback=MyFeedback())
+    }, feedback=MyFeedback())'''
     
 
 # Create random points inside the polygons.
@@ -312,11 +312,11 @@ def sampling_test(total):
 
     glog.pushInfo(f"[BEGIN] sampling_test / hazard = {hazard_cnt}, no_hazard = {no_hazard_cnt}")
     hazard = data_dir + 'hazard.gpkg'
-    _point_sampling(layer, f'"{hazard_field}"=1', hazard_cnt, 5, output=hazard)
+    #_point_sampling(layer, f'"{hazard_field}"=1', hazard_cnt, 5, output=hazard)
     #_point_sampling(layer, f'"{hazard_field}"=1', hazard_cnt, ref_pixel_size, output=hazard)
     #_point_sampling(layer, f""""{hazard_field}"=1 and "{train_test_field}"='{test_attr}'""", hazard_cnt, ref_pixel_size, output=hazard)
     no_hazard = data_dir + 'no_hazard.gpkg'
-    _point_sampling(layer, f'"{hazard_field}"=0', no_hazard_cnt, 5, output=no_hazard)
+    #_point_sampling(layer, f'"{hazard_field}"=0', no_hazard_cnt, 5, output=no_hazard)
     #_point_sampling(layer, f'"{hazard_field}"=0', no_hazard_cnt, ref_pixel_size, output=no_hazard)
     #_point_sampling(layer, f""""{hazard_field}"=0 and "{train_test_field}"='{test_attr}'""", no_hazard_cnt, ref_pixel_size, output=no_hazard)
     glog.pushInfo(f"[END] sampling_test / hazard = {hazard_cnt}, no_hazard = {no_hazard_cnt}")
@@ -343,5 +343,68 @@ def sampling_test(total):
     
     glog.pushInfo(f"[END] sampling_test")
 
+
+import os
+from qgis.core import QgsCoordinateReferenceSystem, QgsVectorFileWriter, QgsVectorLayer
+def sample_with_percipitation(percipitation_paths, points_paths, save_to):
+    # sampling
+    for points_path in points_paths:
+        output = os.path.join(save_to, os.path.basename(points_path).split('.')[0] + '_withprecip.gpkg')
+        processing.run("sagang:addrastervaluestopoints", {
+                'SHAPES':points_path,
+                'GRIDS':percipitation_paths,
+                'RESULT': output,
+                'RESAMPLING':0
+            }, feedback=MyFeedback())
+        # export to csv
+        layer = QgsVectorLayer(output)
+        output = os.path.join(save_to, os.path.basename(points_path).split('.')[0] + '_withprecip.csv')
+        QgsVectorFileWriter.writeAsVectorFormat(layer, output,"utf-8",driverName = "CSV" , layerOptions = ['GEOMETRY=AS_XY'])
+
+def sample_with_90th_precipitation():
+    # 90th precipitation, training
+    precip_90th_path = r'/Users/elexu/Library/CloudStorage/OneDrive-PolitecnicodiMilano/thesis/Lombdardy_data/precipitation/90th percentile/'
+    sample_with_percipitation(
+        [precip_90th_path + 'precipitation_90th.tif',],
+        [
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Val Tartano/data/ValTartano_Training_Points/ValTartano_Training_Points.shp",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Upper Valtellina/data/UpperValtellina_LSM_training_points/UpperValtellina_LSM_training_points.shp",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/trainingPointsSampled.gpkg",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/v1_WithoutTrainingPoints/testingPointsSampled.shp",
+        ],
+        precip_90th_path
+    )
+
+def sample_with_avg_precipitation():
+    # average precipitation, training
+    precip_avg_path = r'/Users/elexu/Library/CloudStorage/OneDrive-PolitecnicodiMilano/thesis/Lombdardy_data/precipitation/average/'
+    sample_with_percipitation(
+        [precip_avg_path + 'precipitation_avg.tif'],
+        [
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Val Tartano/data/ValTartano_Training_Points/ValTartano_Training_Points.shp",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Upper Valtellina/data/UpperValtellina_LSM_training_points/UpperValtellina_LSM_training_points.shp",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/trainingPointsSampled.gpkg",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/v1_WithoutTrainingPoints/testingPointsSampled.shp",
+        ],
+        precip_avg_path
+    )
+
+def sample_with_precipitations():
+    # average precipitation, training
+    precip_path = r'/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/Lombardy/1.factors/'
+    sample_with_percipitation(
+        [precip_path + 'precipitation_avg.tif', precip_path + 'precipitation_90th.tif'],
+        [
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Val Tartano/data/ValTartano_Training_Points/ValTartano_Training_Points.shp",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/Upper Valtellina/data/UpperValtellina_LSM_training_points/UpperValtellina_LSM_training_points.shp",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/trainingPointsSampled.gpkg",
+            r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/ValChiavenna/data/v1_WithoutTrainingPoints/testingPointsSampled.shp",
+        ],
+        '/Volumes/Another/tmp/'
+    )
+
 #factor_sampling()
-sampling_test(2*200*1000)
+#sampling_test(2*200*1000)
+#sample_with_avg_precipitation()
+#sample_with_90th_precipitation()
+sample_with_precipitations()

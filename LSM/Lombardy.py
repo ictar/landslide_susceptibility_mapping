@@ -117,7 +117,9 @@ def Lombardy(clfs, ld_dir, factor_dirs, testset_path):
 def Lombardy_WithChunk():
     ld_dir = base_dir + r"Lombardy/"
     factor_dir = ld_dir+"1.factors/"
-    result_path = ld_dir+"3.results/Valchiavenna_2_with/"
+    #result_path = ld_dir+"3.results/Valchiavenna_4th_avgprecip/"
+    #result_path = ld_dir+"3.results/Valchiavenna_5th_90thprecipp/"
+    result_path = ld_dir+"3.results/Valchiavenna_6_precips/"
 
     clfs_dir = base_dir + r"ValChiavenna/3.results/3rd_onlyVC/"
     clfs = {
@@ -126,13 +128,18 @@ def Lombardy_WithChunk():
         #GRADIENT_TREE_BOOSTING_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_Gradient Tree Boosting.pkl", "skip": True},
         #ADABOOST_MODEL_LABLE: {"path": clfs_dir+"Valchiavenna_AdaBoost.pkl", "skip_predict": True},
         #NEURAL_NETWORK_MODEL_LABEL: {"path": clfs_dir+"NNLogistic/Valchiavenna_Neural Network.pkl", "skip_predict": True},
-        CALIBRATED_ADABOOST_MODEL_LABLE: {"path": vc_clfs['2_with']['clfs']["basic"][CALIBRATED_ADABOOST_MODEL_LABLE]["path"], "skip_predict": True},
+        #NEURAL_NETWORK_MODEL_LABEL: {'path': vc_dir+"3.results/4th_avgprecip/NN/Valchiavenna_Neural Network.pkl", }
+        NEURAL_NETWORK_MODEL_LABEL: {'path': vc_dir+"3.results/6th_precips/NN/Valchiavenna_Neural Network.pkl", }
+        #CALIBRATED_ADABOOST_MODEL_LABLE: {"path": vc_clfs['2_with']['clfs']["basic"][CALIBRATED_ADABOOST_MODEL_LABLE]["path"], "skip_predict": True},
         #ENSEMBLE_BLEND_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Blending.pkl", "skip_predict": True},
         #ENSEMBLE_STACK_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Stacking.pkl", "predict_from": 1611061944},
         #ENSEMBLE_SOFT_VOTING_MODEL_LABEL: {"path": clfs_dir+"ensemble/Valchiavenna_Ensemble Soft Voting.pkl", "predict_from": 1006913715},
     }
 
-    column_types={'dtm': 'float32', 'east': 'float32', 'ndvi': 'float32', 'north': 'float32', 'faults': 'float32', 'rivers': 'float32', 'roads': 'float32', 'dusaf': 'float32', 'plan': 'float32', 'profile': 'float32', 'twi': 'float32'}
+    column_types={
+        'dtm': 'float32', 'east': 'float32', 'ndvi': 'float32', 'north': 'float32', 'faults': 'float32', 'rivers': 'float32', 'roads': 'float32', 'dusaf': 'float32', 'plan': 'float32', 'profile': 'float32', 'twi': 'float32', 
+        'precipitation_avg': 'float32', 'precipitation_90th': 'float32',
+    }
 
     LSM_PredictMap_WithChunk(clfs, factor_dir, result_path, need_chunk=False, column_types=column_types, chunk_size=PROCESS_BATCH_SIZE, pred_batch_size=PREDICT_BATCH_SIZE)
 
@@ -211,6 +218,35 @@ def evaluation_on_basins():
         tmp_save_to = os.path.join(save_to, region)
         evaluation_report(y_true, y_pred, "Neural Network + VCC2 in Lombardy", save_to=tmp_save_to)
 
+def evaluation_on_classifiers_with_precipitation():
+    model_lable = NEURAL_NETWORK_MODEL_LABEL
+    infos = [
+        {
+            'testset_path': ld_testset_path_north_with_precip,
+            'clfs': {
+                #vc_dir+"3.results/4th_avgprecip/NN/Valchiavenna_Neural Network.pkl": ld_dir + "/3.results/testingpoints_northern/Valchiavenna_4_avgprecip/",
+                #vc_dir+"3.results/5th_90thprecip/NN/Valchiavenna_Neural Network.pkl": ld_dir + "/3.results/testingpoints_northern/Valchiavenna_5_90thprecip/",
+                vc_dir+"3.results/6th_precips/NN/Valchiavenna_Neural Network.pkl": ld_dir + "/3.results/testingpoints_northern/Valchiavenna_6_precips/",
+            },
+        },
+        {
+            'testset_path': ld_testset_path_whole_with_precip,
+            'clfs': {
+                #vc_dir+"3.results/4th_avgprecip/NN/Valchiavenna_Neural Network.pkl": ld_dir + "/3.results/testingpoints_without_3regions/Valchiavenna_4_avgprecip/",
+                #vc_dir+"3.results/5th_90thprecip/NN/Valchiavenna_Neural Network.pkl": ld_dir + "/3.results/testingpoints_without_3regions/Valchiavenna_5_90thprecip/",
+                vc_dir+"3.results/6th_precips/NN/Valchiavenna_Neural Network.pkl": ld_dir + "/3.results/testingpoints_without_3regions/Valchiavenna_6_precips/",
+            },
+        }
+    ]
+    for info in infos:
+        for clf_path, save_to in info['clfs'].items():
+            print(f"Evaluate {clf_path} on testest {info['testset_path']} and save the result to {save_to}")
+            report = evaluation_with_testset(info['testset_path'], clf_path, model_lable, save_to=save_to)
+            report['clf_path'] = clf_path
+            report['testset_path'] = info['testset_path']
+            import json
+            with open(os.path.join(save_to, "report.json"), "w") as f:
+                json.dump(report, f)
 
 if __name__ == '__main__':
 
@@ -236,7 +272,7 @@ if __name__ == '__main__':
     #testset_path = ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv"
     #preparation(ld_dir+"1.factors", M=1, N=5)
     #Lombardy(clfs, ld_dir, factor_dirs, testset_path)
-    #Lombardy_WithChunk()
+    Lombardy_WithChunk()
     #check_factors()
     """ Evaluation using the test dataset"""
     test_info = [
@@ -270,4 +306,5 @@ if __name__ == '__main__':
     
     #plot_evaluation()
 
-    evaluation_on_basins()
+    #evaluation_on_basins()
+    #evaluation_on_classifiers_with_precipitation()

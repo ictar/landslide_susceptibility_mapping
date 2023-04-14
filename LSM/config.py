@@ -1,12 +1,15 @@
 import numpy as np
 
 #base_dir = r"/Users/elexu/Education/Politecnico(GIS-CS)/Thesis/practice/"
-#base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/"
-base_dir = r"/Users/elexu/Library/CloudStorage/OneDrive-PolitecnicodiMilano/thesis/practice/"
+base_dir = r"/Volumes/Another/3. Education/Politecnico(GIS-CS)/3 Thesis/practice/"
+#base_dir = r"/Users/elexu/Library/CloudStorage/OneDrive-PolitecnicodiMilano/thesis/practice/"
 
 rFactors = ['dtm', 'east', 'ndvi', 'north', 'faults',
         'rivers','roads','dusaf',
-        'plan','profile','twi']
+        'plan','profile','twi',
+        'precipitation_90th',
+        'precipitation_avg',
+        ]
 
 categorical_factors = ['dusaf','faults','rivers','roads']
 # categorical_factors = ['dusaf','faults','rivers','roads', 'plan', 'profile'] # add to check if plan/profile should be used as categorical factor
@@ -156,3 +159,8 @@ vc_clfs = {
     }
 
 ld_dir = base_dir + r"Lombardy/"
+ld_testset_path_north = ld_dir+"/2.samples/Lombardy_LSM_testing_points_northern.csv"
+ld_testset_path_whole = ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions.csv"
+# with precipitation
+ld_testset_path_north_with_precip = ld_dir+"/2.samples/Lombardy_LSM_testing_points_northern_precip.csv"
+ld_testset_path_whole_with_precip = ld_dir+"/2.samples/Lombardy_LSM_testing_points_without_3regions_precip.csv"

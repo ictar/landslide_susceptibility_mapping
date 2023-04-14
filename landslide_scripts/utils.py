@@ -43,3 +43,31 @@ def remove_sdat(sdat_name):
             os.remove(ele)
         except Exception as e:
             print(e)
+
+LSM_4CLASSES_RANGE = '(0 <"{layer}" and "{layer}" <=0.25)*1 + (0.25 <"{layer}" and "{layer}" <=0.5)*2 + (0.5 <"{layer}" and "{layer}" <=0.75)*3 + (0.75 <"{layer}" and "{layer}" <=1)*4'
+LSM_5CLASSES_RANGE = '(0 <"{layer}" and "{layer}" <=0.2)*1 + (0.2 <"{layer}" and "{layer}" <=0.4)*2 + (0.4 <"{layer}" and "{layer}" <=0.6)*3 + (0.6 <"{layer}" and "{layer}" <=0.9)*4 + (0.9 <"{layer}" and "{layer}" <=1)*5'
+
+def cal_classes_area(layer, classlayer, classarealayer, classsqkmarealayer, exp):
+    # 1. transfer layer to classes: Raster calculator
+    processing.runAndLoadResults('qgis:rastercalculator', {
+                        'LAYERS': [layer],
+                        'EXPRESSION':'("slope@1"<=0)*1+("slope@1">0)*"slope@1"',
+                        'OUTPUT': classlayer,
+                    }, feedback=MyFeedback())
+    # 2. calculate class areas:  Raster Layer Unique Values Report
+    processing.runAndLoadResults("native:rasterlayeruniquevaluesreport", {
+        'INPUT':classlayer,
+        'BAND':1,
+        'OUTPUT_HTML_FILE':'TEMPORARY_OUTPUT',
+        'OUTPUT_TABLE':classarealayer,
+    }, feedback=MyFeedback())
+    # 3. convert the area to s.q. kms: Vector table ‣ Field Calculator
+    processing.runAndLoadResults("native:fieldcalculator", {
+        'INPUT':classarealayer,
+        'FIELD_NAME':'area_sqkm',
+        'FIELD_TYPE':0,
+        'FIELD_LENGTH':0,
+        'FIELD_PRECISION':0,
+        'FORMULA':'round("m2" / 1e6, 2)',
+        'OUTPUT':classsqkmarealayer
+    }, feedback=MyFeedback())

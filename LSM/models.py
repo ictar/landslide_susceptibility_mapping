@@ -146,6 +146,7 @@ def neural_network(X, Y, Xtest, Ytest,
     print(f"{NEURAL_NETWORK_MODEL_LABEL} Parameters: {model_paras}")
     # train
     clf = MLPClassifier(**model_paras).fit(X, Y)
+    print(f"{NEURAL_NETWORK_MODEL_LABEL} Features: {clf.feature_names_in_}")
     # test
     Ytest_pred = clf.predict_proba(Xtest)
     ## test result evaluation

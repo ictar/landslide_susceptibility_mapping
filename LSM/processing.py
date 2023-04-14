@@ -364,7 +364,7 @@ def LSM_PredictMap_WithChunk(clfs, factor_dir, result_path, need_chunk=True, col
 
         if not skip_predict:
             clf = load_model(model_path)
-            print(f"[DONE] Load model {model_label}. Features are {clf.feature_names_in_}")
+            print(f"[DONE] Load model {model_label} from {model_path}. Features are {clf.feature_names_in_}")
             
             chunk_target_paths = []
             for ifrom, ito in chunk_idxs:
@@ -375,7 +375,7 @@ def LSM_PredictMap_WithChunk(clfs, factor_dir, result_path, need_chunk=True, col
                 print(f"\nFrom idx {ifrom} to idx {ito}")
                 #chunk_target_path = os.path.join(chunk_save_to, f"target_{ifrom}_{ito}.csv")
                 chunk_target_paths.append(os.path.join(chunk_save_to, f"target_{ifrom}_{ito}.csv"))
-                if len(chunk_target_paths) == 3:
+                if len(chunk_target_paths) == 4:
                     from joblib import Parallel, delayed
                     Parallel(n_jobs=len(chunk_target_paths))(delayed(bigdata_predict)(clf, model_label, chunk_target_path, column_types, chunk_size=chunk_size, clf_pred_dir=clf_pred_dir,batch_size=pred_batch_size) for chunk_target_path in chunk_target_paths)
                     #bigdata_predict(clf, model_label, chunk_target_path, column_types, chunk_size=chunk_size, clf_pred_dir=clf_pred_dir,batch_size=pred_batch_size)
