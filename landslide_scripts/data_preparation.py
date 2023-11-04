@@ -199,6 +199,6 @@ def prepare_data():
     vector_data_handling()
 
 
-#prepare_data()
+prepare_data()
 
-east_north()
+#east_north()
